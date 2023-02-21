@@ -1,0 +1,80 @@
+traducao assembly para maquina	pag 91
+decodificacao	pag 123 e pag 682
+cap 3	pag 196
+cap 4	pag 256
+cap 5	pag 378
+
+##############################
+
+INTRUCOES TIPO R
+
+add rd, rs, rt
+	000000	rs	rt	rd	00000	100000
+
+sub rd, rs, rt
+	000000	rs	rt	rd	00000	100010
+
+and rd, rs, rt
+	000000	rs	rt	rd	00000	100100
+
+or rd, rs, rt
+	000000	rs	rt	rd	00000	100101
+
+nor rd, rs, rt
+	000000	rs	rt	rd	00000	100111
+
+mult rs, rt
+	000000	rs	rt	00000	00000	011000
+
+sll rd, rt, shamt
+	000000	00000	rt	rd	shamt	000000
+
+srl rd, rt, shamt
+	000000	00000	rt	rd	shamt	000010
+
+mul rd, rs, rt
+	011100	rs	rt	rd	00000	000010
+
+div rs, rt
+	000000	rs	rt	00000	00000	011010
+
+slt rd, rs, rt
+	000000	rs	rt	rd	00000	101010
+
+jr rs
+	000000	rs	00000	00000	00000	001000
+
+##############################
+
+INTRUCOES TIPO I
+
+addi rt, rs, imm
+	001000	rs	rt	imm
+
+lw rt, offset(rs)
+	100011	rs	rt	offset
+
+sw rt, offset(rs)
+	101011	rs	rt	offset
+
+beq rs, rt, label
+	000100	rs	rt	label
+
+bne rs, rt, label
+	000101	rs	rt	label
+
+bge rs rt label = slt + beq
+	slt at, rs, rt
+		000000	rs	rt	at	00000	101010
+	beq at, zero, label
+		000100	at	zero	label
+
+##############################
+
+INTRUCOES TIPO J
+
+j target
+	000010	target
+
+jal target
+	000011 target
