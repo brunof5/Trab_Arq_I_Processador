@@ -37,23 +37,49 @@ void Memoria::imprimir_endereco(){
 	cout << endl;
 }
 
-class Registadores : public Memoria{
+// Todo registrador possui 32 bits (4 bytes)
+// logo os 32 registradores ocupam 4 * 32 = 128 bytes
+class Registadores{
 	
+	private:
+		byte zero[4];	// valor constante 0
+		byte v0[4], v1[4];	// variáveis para retorno de funcões e outras utilidades
+		byte a0[4], a1[4], a2[4], a3[4];	// argumentos
+		byte t0[4], t1[4], t2[4], t3[4], t4[4], t5[4], t6[4], t7[4], t8[4], t9[4];	// variáveis temporarias
+		byte s0[4], s1[4], s2[4], s3[4], s4[4], s5[4], s6[4], s7[4];	// variáveis salvas
+		byte *gp;	// globar pointer
+		byte *sp;	// stack pointer
+		byte *fp;	// frame pointer
+		byte ra[4];		// retorno de funcao
+		
 	public:
-		Registadores(Memoria *mem) : Memoria(*mem) {};
+		Registadores();
+		~Registadores();
 };
+
+Registadores::Registadores(){
+	
+	gp = new byte[4];
+	sp = new byte[4];
+	fp = new byte[4];
+}
+
+Registadores::~Registadores(){
+	
+	delete[] gp;
+	delete[] sp;
+	delete[] fp;
+}
 
 int main(){
 	
-	Memoria *mem = new Memoria;
+	Memoria mem;
 	
-	cout << sizeof(mem->memoria_teste) << endl;
+	cout << sizeof(mem.memoria_teste) << endl;
 	
-	mem->imprimir_endereco();
+	mem.imprimir_endereco();
 	
-	Registadores Rs(mem);
-	
-	delete mem;
+	Registadores Rs;
 	
 	return 0;
 }
