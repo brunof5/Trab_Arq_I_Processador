@@ -331,6 +331,8 @@ int main(){
 		string texto;
 		bool integridade = true;
 		
+		ofstream arquivo_saida("instrucoes_binario.bin", ios::binary);
+		
 		while(integridade){
 			
 			// leitura da instrucao (add, sub, lw, sw, ...)
@@ -353,17 +355,31 @@ int main(){
 			
 			if(integridade){
 				
+				string resultado;
+				
 				if(numero_instrucao >= 0 and numero_instrucao <= 11)
-					cout << formato_instrucao_R(numero_instrucao, arquivo_entrada) << endl;
+					resultado = formato_instrucao_R(numero_instrucao, arquivo_entrada);
 					
 				if(numero_instrucao >= 12 and numero_instrucao <= 17)
-					cout << formato_instrucao_I(numero_instrucao, arquivo_entrada) << endl;
+					resultado = formato_instrucao_I(numero_instrucao, arquivo_entrada);
 					
 				if(numero_instrucao == 18 or numero_instrucao == 19)
-					cout << formato_instrucao_J(numero_instrucao, arquivo_entrada) << endl;
+					resultado = formato_instrucao_J(numero_instrucao, arquivo_entrada);
+					
+				cout << resultado << endl;
+				
+				// bge
+				if(numero_instrucao == 17)
+					for(int i = 0; i < 64; i++)
+						arquivo_saida.write((char*)(&resultado[i]), sizeof(char));
+						
+				if(numero_instrucao != 17)
+					for(int i = 0; i < 32; i++)
+						arquivo_saida.write((char*)(&resultado[i]), sizeof(char));
 			}
 		}
 		
+		arquivo_saida.close();
 		arquivo_entrada.close();
 	}
 	
