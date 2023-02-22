@@ -8,6 +8,46 @@ typedef unsigned char byte;	// 8 bits
 #define barramento_dados byte[4]	// 32 bits
 #define barramento_endereco byte[2]	// 16 bits
 
+class Controle{
+	
+	private:
+		bool RegDst;
+		bool RegWrite;
+		...
+		
+	public:
+		void verificar_instrucao(bitset<32> instrucao_atual);
+}
+
+void Controle::verificar_instrucao(bitset<32> instrucao_atual){
+	
+	string aux = instrucao_atual.to_string(); // converte para string para pegar os valores mais facilmente
+	string opcode_referencia1 = aux.substr(0, 6); // pega os primeiros 6 caracteres
+	string opcode_referencia2 = aux.substr(26); // pega os Ãºltimos 6 caracteres
+	
+	if(opcode == "000000"){ // tipo R
+		
+		switch(function)
+	}
+	
+	else// tipo I ou tipo J
+	{
+		swtich(opcode)
+	}
+	
+	
+	
+	switch(opcode){
+		
+		case 
+	}
+	
+	switch(funct){
+		
+		case 
+	}
+}
+
 class Memoria{
 	
 	public:
