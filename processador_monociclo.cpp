@@ -4,6 +4,11 @@
 
 using namespace std;
 
+#define numero_total_enderecos 64000
+#define tamanho_palavra 4
+#define comeco_memoria_texto 256
+#define tamanho_instrucao 32
+
 class EX{
 
 private:
@@ -72,45 +77,114 @@ public:
 		
 };
 
+class Memoria{
+	
+	protected:
+		// 64000 endereços * 4 bytes cada = 256000
+		// 0 eh a posicao inicial da memoria e 255999 eh a posicao final da memoria
+		bitset<numero_total_enderecos*tamanho_palavra> memoria;
+		
+	public:
+		Memoria(ifstream& arquivo_entrada);
+		void depuracao();
+};
 
-bitset<32> retornar_instrucao(ifstream& arquivo_entrada, int posicao_da_instrucao){
+Memoria::Memoria(ifstream& arquivo_entrada){
 	
-	char instrucao_atual_char[32];
+	arquivo_entrada.seekg(0, arquivo_entrada.end);
+	int tamanho_arquivo = arquivo_entrada.tellg();
+	int quantidade_instrucoes = tamanho_arquivo / tamanho_instrucao;
+	arquivo_entrada.seekg(0, arquivo_entrada.beg);
+	
+	char instrucao_atual_char[tamanho_instrucao];
 	bool valor_bit = false;
-	bitset<32> instrucao_atual;
+	bitset<tamanho_instrucao> instrucao_atual;
+	int aux = comeco_memoria_texto;
 	
-	arquivo_entrada.seekg(32 * posicao_da_instrucao, arquivo_entrada.beg);
-	
-	// leitura de 32 bytes (32*char) para 32 bits (bitset)
-	for(unsigned int i = 0, j = 31; i < 32; i++, j--){
+	for(int i = 0; i < quantidade_instrucoes; i++){
 		
-		arquivo_entrada.read((char*)(&instrucao_atual_char[i]), sizeof(char));
+		for(unsigned int j = 0, k = 31; j < tamanho_instrucao; j++, k--){
+			
+			arquivo_entrada.read((char*)(&instrucao_atual_char[j]), sizeof(char));
+			
+			if(instrucao_atual_char[j] == '0')
+				valor_bit = false;
+				
+			if(instrucao_atual_char[j] == '1')
+				valor_bit = true;
+				
+			memoria.set(aux + k, valor_bit);
+		}
 		
-		if(instrucao_atual_char[i] == '0')
-			valor_bit = false;
-			
-		if(instrucao_atual_char[i] == '1')
-			valor_bit = true;
-			
-		instrucao_atual.set(j, valor_bit);
+		cout << instrucao_atual_char << endl;
+		
+		aux += tamanho_instrucao;
 	}
+}
+
+void Memoria::depuracao(){
+	
+	bitset<tamanho_instrucao> instrucao_atual;
+	int aux = comeco_memoria_texto;
+	
+	for(int j = 0; j < 21; j++){
+		
+		cout << aux << endl;
+		
+		for(int i = 0; i < tamanho_instrucao; i++)
+			instrucao_atual[i] = memoria[aux + i];
+			
+		cout << instrucao_atual << endl;
+		
+		aux += tamanho_instrucao;
+	}
+}
+
+class IF : protected Memoria{
+	
+	protected:
+		unsigned int PC;
+		
+	public:
+		IF(Memoria *mem);
+		bitset<tamanho_instrucao> retornar_instrucao();
+};
+
+IF::IF(Memoria *mem) : Memoria(*mem){
+	
+	PC = comeco_memoria_texto;
+}
+
+bitset<tamanho_instrucao> IF::retornar_instrucao(){
+	
+	bitset<tamanho_instrucao> instrucao_atual;
+	
+	for(int i = 0; i < tamanho_instrucao; i++)
+		instrucao_atual[i] = memoria[PC + i];
+		
+	PC += tamanho_instrucao;
 	
 	return instrucao_atual;
 }
 
 int main(){
 	
-	EX instrucao1;
-	
 	ifstream arquivo_entrada("instrucoes_binario.bin", ios::binary);
 	
 	if(arquivo_entrada){
 		
-		bitset<32> instrucao_atual = retornar_instrucao(arquivo_entrada, 0);
+		Memoria *mem = new Memoria(arquivo_entrada);
 		
-		cout << instrucao_atual << endl;
+		IF estagio_I(mem);
 		
-		instrucao1.ALU(instrucao_atual);
+		mem->depuracao();
+		
+		cout << "#####################" << endl;
+		
+		for(int i = 0; i < 21; i++)
+			cout << estagio_I.retornar_instrucao() << endl;
+			
+		delete mem;
 		
 		arquivo_entrada.close();
 	}
