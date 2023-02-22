@@ -292,7 +292,7 @@ string formato_instrucao_I(int instrucao, ifstream& arquivo_entrada){
 	
 	if(instrucao != 17)
 		instrucao_decodificada = opcode + primeiro_operando + segundo_operando + offset;
-	
+		
 	return instrucao_decodificada;
 }
 
@@ -370,8 +370,9 @@ int main(){
 				
 				// bge
 				if(numero_instrucao == 17)
-					for(int i = 0; i < 64; i++)
-						arquivo_saida.write((char*)(&resultado[i]), sizeof(char));
+					for(int i = 0; i < 65; i++)
+						if(resultado[i] != '\n')
+							arquivo_saida.write((char*)(&resultado[i]), sizeof(char));
 						
 				if(numero_instrucao != 17)
 					for(int i = 0; i < 32; i++)
