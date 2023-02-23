@@ -167,6 +167,320 @@ bitset<tamanho_instrucao> IF::retornar_instrucao(){
 	return instrucao_atual;
 }
 
+
+//Implementação do segundo estágio de Processamento - ID
+//Parte do Davi**
+
+
+//notes
+/*The if statement for the mul instruction checks instrucao.funct against a character literal ('000010')
+instead of an integer literal (0x10). This will not match the correct value, as the character literal
+represents the ASCII value for the character '0' rather than the binary value.*/
+
+/*The comparisons in the if statements inside the switch statement use character literals (e.g. '011100')
+instead of integer literals (e.g. 0x1C). This will not work as expected, as character literals represent
+individual characters rather than binary values. You should replace them with integer literals*/
+/*Está com alguns problemas para identificar o cases, diz duplicate cases, mas não há duplicatas*/
+#include <iostream>
+#include <bitset>
+using namespace std;
+struct instrucaoDecodificada {
+    int opcode;
+    int rs;
+    int rt;
+    int rd;
+    int shamt;
+    int funct;
+    int offset;
+    int address;
+};
+class controle {
+    private :
+        bool Regdst;
+        bool Regwrite;
+        bool Aluctrl = false;
+        bool Memread;
+        bool Memwrite;
+        int  Aluop;
+        bool Alusrc;
+        bool MemtoReg;
+        bool Branch;
+        bool Jump;
+    public :
+        void decodificar_instrucao(string instrucao_binaria);
+
+};
+void controle :: decodificar_instrucao (string instrucao_binaria){// Maioria não utilizada, apenas declarada.
+    instrucaoDecodificada instrucao;
+
+
+    bitset<32> bits(instrucao_binaria);
+
+    //tipo R
+    instrucao.opcode = bits.to_ulong() >> 26; // extrai os 6 bits mais significativos
+    instrucao.rs = (bits.to_ulong() >> 21) & 0x1F; //extrai os 5 bits seguintes
+    instrucao.rt = (bits.to_ulong() >> 16) & 0x1F; //extrai os 5 bits seguintes
+    instrucao.rd = (bits.to_ulong() >> 11) & 0x1F;//proximos 5 bits da inst binaria, correspondem ao rd
+    instrucao.shamt = (bits.to_ulong() >> 6) & 0x1F;
+    instrucao.funct = bits.to_ulong() & 0x3F;//extrai os 6 bits menos significativos
+
+    //Para instruções do tipo I, o campo offset deve ser extraído. Para instruções do tipo J, o campo address deve ser extraído
+
+    //tipo I
+    instrucao.offset = bits.to_ulong() & 0xFFFF;// extrai os 16 bits menos significativos
+
+    //tipo J
+    instrucao.address = bits.to_ulong() & 0x3FFFFFF;// extrai os 26 bits menos significativos
+
+    //instrução mul R-Type
+    if (instrucao.opcode == '011100' and instrucao.funct=='000010'){ //mul instruction, R-Type
+            Regdst = 1;
+            Regwrite = 1;
+            Alusrc = 0;
+            Aluop = 11;
+            MemtoReg = 0;
+            Jump = 0;
+            Branch = 0;
+            Memwrite = 0;
+            Memread = 0;
+    }
+
+    // Instruções do tipo R
+    if (instrucao.opcode == 000000){
+        switch(instrucao.funct)
+        {
+                case '100000':
+                    //return add
+                    Regdst = 1;
+                    Regwrite = 1;
+                    Alusrc = 0;
+                    Aluop = 10;
+                    MemtoReg = 0;
+                    Jump = 0;
+                    Branch = 0;
+                    Memwrite = 0;
+                    Memread = 0;
+                    break;
+
+                case '100010'://sub
+                    Regdst = 1;
+                    Regwrite = 1;
+                    Alusrc = 0;
+                    Aluop = 10;
+                    MemtoReg = 0;
+                    Jump = 0;
+                    Branch = 0;
+                    Memwrite = 0;
+                    Memread = 0;
+                    break;
+
+                case '100100'://and
+                    Regdst = 1;
+                    Regwrite = 1;
+                    Alusrc = 0;
+                    Aluop = 00;
+                    MemtoReg = 0;
+                    Jump = 0;
+                    Branch = 0;
+                    Memwrite = 0;
+                    Memread = 0;
+                    break;
+
+                case '100101' ://or
+                    Regdst = 1;
+                    Regwrite = 1;
+                    Alusrc = 0;
+                    Aluop = 01;
+                    MemtoReg = 0;
+                    Jump = 0;
+                    Branch = 0;
+                    Memwrite = 0;
+                    Memread = 0;
+                    break;
+
+                case '100111': //nor
+                    Regdst = 1;
+                    Regwrite = 1;
+                    Alusrc = 0;
+                    Aluop = 01;
+                    MemtoReg = 0;
+                    Jump = 0;
+                    Branch = 0;
+                    Memwrite = 0;
+                    Memread = 0;
+                    break;
+/*
+                case '000000'://sll
+                    Regdst = 1;
+                    Regwrite = 1;
+                    Alusrc = 1;
+                    Aluop = 10;
+                    MemtoReg = 0;Regdst = 1;
+                    Regwrite = 1;
+                    Alusrc = 0;
+                    Aluop = 01;
+                    MemtoReg = 0;
+                    Jump = 0;
+                    Branch = 0;
+                    Memwrite = 0;
+                    Memread = 0;
+                    Jump = 0;
+                    Branch = 0;
+                    Memwrite = 0;
+                    Memread = 0;
+                    break;
+
+                case '000010'://srl
+                    Regdst = 1;
+                    Regwrite = 1;
+                    Alusrc = 1;
+                    Aluop = 10;
+                    MemtoReg = 0;
+                    Jump = 0;
+                    Branch = 0;
+                    Memwrite = 0;
+                    Memread = 0;
+                    break;
+*/
+                case '011010': //div
+                    Regdst = 0;
+                    Regwrite = 1;
+                    Alusrc = 0;
+                    Aluop = 11;
+                    MemtoReg = 0;
+                    Jump = 0;
+                    Branch = 0;
+                    Memwrite = 0;
+                    Memread = 0;
+                    break;
+/*
+                case '101010'://slt
+                    Regdst = 1;
+                    Regwrite = 1;
+                    Alusrc = 0;
+                    Aluop = 11;
+                    MemtoReg = 0;
+                    Jump = 0;
+                    Branch = 0;
+                    Memwrite = 0;
+                    Memread = 0;
+                    break;
+*/
+                case '001000':// jr
+                    Regdst = 0;
+                    Regwrite = 0;
+                    Alusrc = 0;
+                    Aluop = 00; // não achei o valor, acho que não importa.
+                    MemtoReg = 0;
+                    Jump = 1;
+                    Branch = 0;
+                    Memwrite = 0;
+                    Memread = 0;
+                    break;
+
+                default : //sll 000000
+                    cout<<"ERRO - Instrucao nao identificada"<<endl;
+        }
+    }
+
+    //Instruções do tipo J
+    //jal e j
+    else if (instrucao.opcode == '000010' or instrucao.opcode == '000011'){
+                    Regdst = 1;
+                    Regwrite = 1;
+                    Alusrc = 0;
+                    Aluop = 11;
+                    MemtoReg = 0;
+                    Jump = 1;
+                    Branch = 0;
+                    Memwrite = 0;
+                    Memread = 0;
+
+    }
+
+    //Instruções do tipo I
+    else
+    {
+        switch (instrucao.opcode){ //Tipo I
+                case '001000': //addi
+                    Regdst = 0;
+                    Regwrite = 1;
+                    Alusrc = 1;
+                    Aluop = 10;
+                    MemtoReg = 0;
+                    Jump = 0;
+                    Branch = 0;
+                    Memwrite = 0;
+                    Memread = 0;
+                    break;
+                case '100011': //lw
+                    Regdst = 0;
+                    Regwrite = 1;
+                    Alusrc = 1;
+                    Aluop = 00;
+                    MemtoReg = 1;
+                    Jump = 0;
+                    Branch = 0;
+                    Memwrite = 0;
+                    Memread = 1;
+                    break;
+
+                case '101011': //sw
+                    Regdst = 0;
+                    Regwrite = 0;
+                    Alusrc = 1;
+                    Aluop = 00;
+                    MemtoReg = 0;
+                    Jump = 0;
+                    Branch = 0;
+                    Memwrite = 1;
+                    Memread = 0;
+                    break;
+
+                case '000100': //beq
+                    Regdst = 0;
+                    Regwrite = 0;
+                    Alusrc = 0;
+                    Aluop = 01;
+                    MemtoReg = 0;
+                    Jump = 0;
+                    Branch = 1;
+                    Memwrite = 0;
+                    Memread = 0;
+                    break;
+
+                case '000101': //bne
+                    Regdst = 0;
+                    Regwrite = 0;
+                    Alusrc = 0;
+                    Aluop = 01;
+                    MemtoReg = 0;
+                    Jump = 0;
+                    Branch = 1;
+                    Memwrite = 0;
+                    Memread = 0;
+                    break;
+/*
+                case '000101': // slt + beq 000000 000100 / Não entendi muito bem essa instrução no anotacoes.txt?
+                    //bge
+                    Regdst = 0;
+                    Regwrite = 0;
+                    Alusrc = 0;
+                    Aluop = 11;
+                    MemtoReg = 0;
+                    Jump = 0;
+                    Branch = 1;
+                    Memwrite = 0;
+                    Memread = 0;
+                    break;
+*/
+                default :
+                    cout<<" ERRO - Instrucao nao identificada"<<endl;
+        }
+    }
+
+}
+
 int main(){
 	
 	ifstream arquivo_entrada("instrucoes_binario.bin", ios::binary);
