@@ -370,7 +370,7 @@ void controle :: decodificar_instrucao (string instrucao_binaria){// Maioria nã
                     Regdst = 0;
                     Regwrite = 0;
                     Alusrc = 0;
-                    Aluop = 00; // não achei o valor, acho que não importa.
+                    Aluop = null; // não achei o valor, acho que não importa para o jr.
                     MemtoReg = 0;
                     Jump = 1;
                     Branch = 0;
@@ -386,10 +386,10 @@ void controle :: decodificar_instrucao (string instrucao_binaria){// Maioria nã
     //Instruções do tipo J
     //jal e j
     else if (instrucao.opcode == '000010' or instrucao.opcode == '000011'){
-                    Regdst = 1;
-                    Regwrite = 1;
+                    Regdst = 0;
+                    Regwrite = 0;
                     Alusrc = 0;
-                    Aluop = 11;
+                    Aluop = null;
                     MemtoReg = 0;
                     Jump = 1;
                     Branch = 0;
@@ -461,7 +461,7 @@ void controle :: decodificar_instrucao (string instrucao_binaria){// Maioria nã
                     Memread = 0;
                     break;
 /*
-                case '000101': // slt + beq 000000 000100 / Não entendi muito bem essa instrução no anotacoes.txt?
+                case '000101': // slt + beq 000000 000100 / Não entendi muito bem essa instrução no anotacoes.txt
                     //bge
                     Regdst = 0;
                     Regwrite = 0;
