@@ -9,506 +9,22 @@ using namespace std;
 #define tamanho_palavra 4
 #define tamanho_instrucao 32
 #define comeco_memoria_texto 256
-
-//Implementação do segundo estágio de Processamento - ID
-//Parte do Davi
-
-struct instrucaoDecodificada {
-    string opcode;
-    int rs;// Acabei por não os utilizar (rs, rt,rd)
-    int rt;
-    int rd;
-    string shamt;
-    string funct;
-};
-
-class controle {
-	
-	friend class EX;
-	
-    private :
-        bool Regdst;
-        bool Regwrite;
-        string Aluctrl;
-        bool Memread;
-        bool Memwrite;
-        int  Aluop;
-        bool Alusrc;
-        bool MemtoReg;
-        bool Branch;
-        bool Jump;
-        
-        string offset;
-        string address;
-        
-    public :
-        void decodificar_instrucao(string instrucao_binaria);
-
-};
-
-void controle :: decodificar_instrucao (string instrucao_binaria){// Maioria não utilizada, apenas declarada.
-    instrucaoDecodificada instrucao;
-
-
-    //bitset<32> bits(instrucao_binaria); Não está mais sendo utilizada.
-
-    //tipo R
-    instrucao.opcode = instrucao_binaria.substr(0, 6);//extrai os 6 bits mais significativos
-
-    /*
-    instrucao.rs = instrucao_binaria.substr(6, 5);//extrai os 5 bits seguintes
-    instrucao.rt = instrucao_binaria.substr(11, 5); //"              "
-    instrucao.rd = instrucao_binaria.substr(16, 5); //"              "
-    */
-
-    instrucao.shamt = instrucao_binaria.substr(21, 5);//"            "
-    instrucao.funct = instrucao_binaria.substr(26, 6);//extrai os 6 bits menos significativos
-    //Tipo I
-    offset = instrucao_binaria.substr(16, 16);//extrai os 16 bits menos significativos
-
-    //Tipo J
-    address = instrucao_binaria.substr(6, 26);//extrai os 26 bits menos significativos
-
-
-    //O opcode dela é diferente, daí o if separado.
-    //instrução mul R-Type difere do mult em relação aos bits, acredito eu 
-    if (instrucao.opcode == "011100" and instrucao.funct=="000010"){ //mul instruction, R-Type
-            Regdst = 1;
-            Regwrite = 1;
-            Alusrc = 0;
-            Aluop = 10;
-            MemtoReg = 0;
-            Jump = 0;
-            Branch = 0;
-            Memwrite = 0;
-            Memread = 0;
-            Aluctrl = "mul";
-    }
-
-    // Instruções do tipo R
-    if (instrucao.opcode == "000000"){
-               if (instrucao.funct == "100000"){
-                    //return add
-                    Regdst = 1;
-                    Regwrite = 1;
-                    Alusrc = 0;
-                    Aluop = 10;
-                    MemtoReg = 0;
-                    Jump = 0;
-                    Branch = 0;
-                    Memwrite = 0;
-                    Memread = 0;
-                    Aluctrl = "add";
-
-                }
-                else if (instrucao.funct == "100010"){//sub --verificado
-                    Regdst = 1;
-                    Regwrite = 1;
-                    Alusrc = 1;
-                    Aluop = 10;
-                    MemtoReg = 0;
-                    Jump = 0;
-                    Branch = 0;
-                    Memwrite = 0;
-                    Memread = 0;
-                    Aluctrl = "sub";
-                }
-
-                else if (instrucao.funct == "100100"){//and
-                    Regdst = 1;
-                    Regwrite = 1;
-                    Alusrc = 0;
-                    Aluop = 00;
-                    MemtoReg = 0;
-                    Jump = 0;
-                    Branch = 0;
-                    Memwrite = 0;
-                    Memread = 0;
-                    Aluctrl = "and";
-                }
-                else if (instrucao.funct == "100111"){//mult -- 64 bits em 2 registradores de saída -- corrigida
-                    Regdst = 0;
-                    Regwrite = 0;
-                    Alusrc = 0;
-                    Aluop = 11;
-                    MemtoReg = 0;
-                    Jump = 0;
-                    Branch = 0;
-                    Memwrite = 0;
-                    Memread = 0;
-                    Aluctrl = "mult";
-                }
-
-                else if (instrucao.funct == "100101"){//or --corrigido
-                    Regdst = 1;
-                    Regwrite = 1;
-                    Alusrc = 0;
-                    Aluop = 01;
-                    //nao sao utilizados
-                    MemtoReg = 0;
-                    Jump = 0;
-                    Branch = 0;
-                    Memwrite = 0;
-                    Memread = 0;
-                    Aluctrl = "or";
-                }
-
-                else if (instrucao.funct == "100111"){ //nor --corrigido
-                    Regdst = 1;
-                    Regwrite = 1;
-                    Alusrc = 0;
-                    Aluop = 11;
-                    //nao sao utilizados
-                    MemtoReg = 0;
-                    Jump = 0;
-                    Branch = 0;
-                    Memwrite = 0;
-                    Memread = 0;
-                    Aluctrl = "nor";
-                }
-
-                else if (instrucao.funct == "000000"){//sll -- verificar -- ok aparentemente
-                    Regdst = 0;
-                    Regwrite = 1;
-                    Alusrc = 1;
-                    Aluop = 10;
-                    MemtoReg = 0;
-                    Memwrite = 0;
-                    Memread = 0;
-                    Jump = 0;
-                    Branch = 0;
-                    Aluctrl = "sll";
-                    
-                  }
-
-                else if (instrucao.funct == "000010"){//srl esta igual ao sub, mas acredito estar correto.
-                    Regdst = 1;
-                    Regwrite = 1;
-                    Alusrc = 1;
-                    Aluop = 10;
-                    MemtoReg = 0;
-                    Jump = 0;
-                    Branch = 0;
-                    Memwrite = 0;
-                    Memread = 0;
-                    Aluctrl = "srl";
-                }
-
-                else if (instrucao.funct == "011010"){ //div -- ok
-                    Regdst = 0;
-                    Regwrite = 1;
-                    Alusrc = 0;
-                    Aluop = 11;
-                    MemtoReg = 0;
-                    Jump = 0;
-                    Branch = 0;
-                    Memwrite = 0;
-                    Memread = 0;
-                    Aluctrl = "div";
-                }
-
-                else if (instrucao.funct == "101010"){//slt -- verificado
-                    Regdst = 1;
-                    Regwrite = 1;
-                    Alusrc = 0;
-                    Aluop = 11;
-                    MemtoReg = 0;
-                    Jump = 0;
-                    Branch = 0;
-                    Memwrite = 0;
-                    Memread = 0;
-                    Aluctrl = "slt";
-                }
-
-                else if (instrucao.funct == "001000"){// jr
-                    Regdst = 0;
-                    Regwrite = 0;
-                    Alusrc = 0;
-                    Aluop = 0; 
-                    MemtoReg = 0;
-                    Jump = 1;
-                    Branch = 0;
-                    Memwrite = 0;
-                    Memread = 0;
-                    Aluctrl = "jr";
-                }
-
-                else {
-                    cout<<"ERRO - Instrucao nao identificada"<<endl;
-                }
-        }
-
-
-    //Instruções do tipo J
-    //j
-    else if (instrucao.opcode == "000010"){
-                    Regdst = 0;
-                    Regwrite = 0;
-                    Alusrc = 0;
-                    Aluop = 0;
-                    MemtoReg = 0;
-                    Jump = 1;
-                    Branch = 0;
-                    Memwrite = 0;
-                    Memread = 0;
-                    Aluctrl = "j";
-
-    }//jal
-    else if (instrucao.opcode == "000011"){
-                    Regdst = 0;
-                    Regwrite = 1;
-                    Alusrc = 0;
-                    Aluop = 0;
-                    MemtoReg = 0;
-                    Jump = 1;
-                    Branch = 0;
-                    Memwrite = 0;
-                    Memread = 0;
-                    Aluctrl = "jal";
-    }
-
-    //Instruções do tipo I
-    else
-    {
-         
-                if (instrucao.opcode == "001000" ){ //addi
-                    Regdst = 0;
-                    Regwrite = 1;
-                    Alusrc = 1;
-                    Aluop = 10;
-                    MemtoReg = 0;
-                    Jump = 0;
-                    Branch = 0;
-                    Memwrite = 0;
-                    Memread = 0;
-                    Aluctrl = "addi";
-                }
-
-                else if (instrucao.opcode == "100011"){ //lw
-                    Regdst = 0;
-                    Regwrite = 1;
-                    Alusrc = 1;
-                    Aluop = 00;
-                    MemtoReg = 1;
-                    Jump = 0;
-                    Branch = 0;
-                    Memwrite = 0;
-                    Memread = 1;
-                    Aluctrl = "lw";
-                }
-
-                else if (instrucao.opcode == "101011") { //sw
-                    Regdst = 0;
-                    Regwrite = 0;
-                    Alusrc = 1;
-                    Aluop = 00;
-                    MemtoReg = 0;
-                    Jump = 0;
-                    Branch = 0;
-                    Memwrite = 1;
-                    Memread = 0;
-                    Aluctrl = "sw";
-                }
-
-                else if (instrucao.opcode == "000100"){ //beq
-                    Regdst = 0;
-                    Regwrite = 0;
-                    Alusrc = 0;
-                    Aluop = 01;
-                    MemtoReg = 0;
-                    Jump = 0;
-                    Branch = 1;
-                    Memwrite = 0;
-                    Memread = 0;
-                    Aluctrl = "beq";
-                }
-
-                else if (instrucao.opcode == "000101"){ //bne
-                    Regdst = 0;
-                    Regwrite = 0;
-                    Alusrc = 0;
-                    Aluop = 01;
-                    MemtoReg = 0;
-                    Jump = 0;
-                    Branch = 1;
-                    Memwrite = 0;
-                    Memread = 0;
-                    Aluctrl = "bne";
-                }
-
-                else {
-                    cout<<" ERRO - Instrucao nao identificada"<<endl;
-                }
-        }
-
-}
-
-class EX{
-	
-private:
-	
-	int rs = 10; //supondo que o registrador1 seja igual a 10
-	int rt = 15; //supondo que o registrador2 seja igual a 15
-	int rd = 0, HI = 0, LO = 0, imm = 0, sa = 0, r31 = 0;
-	
-	void instrucoes_de_desvio (bitset<tamanho_instrucao> instrucao_atual, controle instrucao);
-	void instrucoes_aritmeticas(bitset<tamanho_instrucao> instrucao_atual, controle instrucao);
-		
-public:
-	
-	unsigned int PC;
-	bool ALUzero = 0;
-	void ALU (bitset<tamanho_instrucao> instrucao_atual);
-		
-};
-	
-void EX::ALU(bitset<tamanho_instrucao> instrucao_atual){
-			
-	controle instrucao;
-			
-	string aux = instrucao_atual.to_string();
-	instrucao.decodificar_instrucao(aux);
-			
-	if((instrucao.Branch == 0) and (instrucao.Jump == 0) and (instrucao.Memwrite == 0) and (instrucao.Memread == 0)){
-		instrucoes_aritmeticas(instrucao_atual, instrucao); //Realiza os calculos aritmeticos
-	}
-	else if ((instrucao.Branch == 1) or (instrucao.Jump == 1)){
-		instrucoes_de_desvio(instrucao_atual, instrucao); //Realiza os calculos dos desvios
-	}
-			
-}
-
-void EX::instrucoes_aritmeticas(bitset<tamanho_instrucao> instrucao_atual, controle instrucao){
-			
-	//add
-	if (instrucao.Aluctrl == "add"){ 
-		rd = rs + rt;
-		cout<<"É uma instrução de add"<<endl;
-	}
-	//sub
-	if (instrucao.Aluctrl == "sub"){
-		rd = rs - rt;
-		cout<<"É uma instrução de sub"<<endl;
-	}
-	//addi
-	if (instrucao.Aluctrl == "addi"){
-		rt = rs + imm;
-		cout<<"É uma instrução de addi"<<endl;
-	}
-	//and
-	if (instrucao.Aluctrl == "and"){
-		rd = (rs & rt);
-		cout<<"É uma instrução de and"<<endl;
-	}
-	//or
-	if (instrucao.Aluctrl == "or"){
-		rd = (rs | rt);
-		cout<<"É uma instrução de or"<<endl;
-	}
-	//nor
-	if (instrucao.Aluctrl == "nor"){
-		rd = ~(rs | rt);
-		cout<<"É uma instrução de nor"<<endl;
-	}
-	//mult
-	if (instrucao.Aluctrl == "mult"){
-		HI = rs * rt;
-		LO = HI;
-		cout<<"É uma instrução de mult"<<endl;
-	}
-	//sll
-	if (instrucao.Aluctrl == "sll"){
-		rd = rt << sa;
-		cout<<"É uma instrução de sll"<<endl;
-	}
-	//srl
-	if (instrucao.Aluctrl == "srl"){
-		rd = rt >> sa;
-		cout<<"É uma instrução de srl"<<endl;
-	}
-	//mul
-	if (instrucao.Aluctrl == "mul"){
-		rd = rs * rt;
-		cout<<"É uma instrução de mul"<<endl;
-	}
-	//div
-	if (instrucao.Aluctrl == "div"){
-		HI = rs % rt; 
-		LO = rs / rt;
-		cout<<"É uma instrução de div"<<endl;
-	}
-	//slt
-	if (instrucao.Aluctrl == "slt"){
-		rd = rs < rt;
-		cout<<"É uma instrução de slt"<<endl;
-	}
-			
-	//Verifica se algum resultado corresponde a 0 para acionar a flag.
-			
-	if(((rd == 0) or (rt == 0)) and ((HI == 0) and (LO == 0))){ //Tenho que checar com calma
-		ALUzero = 1;
-	}
-			
-	cout<<endl;
-			
-}
-
-void EX::instrucoes_de_desvio(bitset<tamanho_instrucao> instrucao_atual, controle instrucao){
-			
-	int offset = bitset<16>(instrucao.offset).to_ulong();
-	int target = bitset<26>(instrucao.address).to_ulong();
-			
-	//beq
-	if (instrucao.Aluctrl == "beq"){ 
-		if(rs == rt){
-			PC += offset * 4;
-		}
-		cout<<"É uma instrução de beq"<<endl;
-	}
-	//bne
-	if (instrucao.Aluctrl == "bne"){
-		if(rs != rt){ 
-			PC += offset * 4;
-		}
-		cout<<"É uma instrução de bne"<<endl;
-	}
-	//j
-	if (instrucao.Aluctrl == "j"){
-				
-		bitset<32> num_binario(PC);
-		bitset<4> pc_upper_binario(num_binario.to_string().substr(0,4));
-		int pc_upper = (int)pc_upper_binario.to_ulong();
-				
-		PC = pc_upper + (target * 4);
-		cout<<"É uma instrução de j"<<endl;
-				
-	}
-	//jal
-	if (instrucao.Aluctrl == "jal"){
-		r31 = PC; 
-		PC = target * 4;
-		cout<<"É uma instrução de jal"<<endl;
-	}
-	//jr
-	if (instrucao.Aluctrl == "jr"){
-		PC = rs;
-		cout<<"É uma instrução de jr"<<endl;
-	}
-			
-	cout <<"Desvio em decimal: "<< PC << endl << endl;
-			
-}
+#define comeco_memoria_dados 3456
 
 class Memoria{
 	
-	protected:
+	friend class IF;
+	
+	private:
 		// 64000 endereços * 4 bytes cada = 256000
 		// 0 eh a posicao inicial da memoria e 255999 eh a posicao final da memoria
 		bitset<numero_total_enderecos*tamanho_palavra> memoria;
+		unsigned int quantidade_instrucoes;
 		
 	public:
 		Memoria(ifstream& arquivo_entrada);
-		void depuracao();
+		unsigned int get_quantidade_instrucoes() { return quantidade_instrucoes; };
+		void depuracao_memoria();
 };
 
 Memoria::Memoria(ifstream& arquivo_entrada){
@@ -516,10 +32,12 @@ Memoria::Memoria(ifstream& arquivo_entrada){
 	arquivo_entrada.seekg(0, arquivo_entrada.end);
 	int tamanho_arquivo = arquivo_entrada.tellg();
 	
-	if(tamanho_arquivo > 3200)
+	cout << tamanho_arquivo << endl;
+	
+	if(tamanho_arquivo > comeco_memoria_dados - comeco_memoria_texto)
 		throw runtime_error("ERRO NUMERO DE INSTRUCOES - capacidade de instrucoes passou do esperado!");
 		
-	int quantidade_instrucoes = tamanho_arquivo / tamanho_instrucao;
+	quantidade_instrucoes = tamanho_arquivo / tamanho_instrucao;
 	arquivo_entrada.seekg(0, arquivo_entrada.beg);
 	
 	char instrucao_atual_char[tamanho_instrucao];
@@ -527,7 +45,7 @@ Memoria::Memoria(ifstream& arquivo_entrada){
 	bitset<tamanho_instrucao> instrucao_atual;
 	int aux = comeco_memoria_texto;
 	
-	for(int i = 0; i < quantidade_instrucoes; i++){
+	for(int i = 0; i < (int)quantidade_instrucoes; i++){
 		
 		for(unsigned int j = 0, k = 31; j < tamanho_instrucao; j++, k--){
 			
@@ -548,7 +66,7 @@ Memoria::Memoria(ifstream& arquivo_entrada){
 	}
 }
 
-void Memoria::depuracao(){
+void Memoria::depuracao_memoria(){
 	
 	bitset<tamanho_instrucao> instrucao_atual;
 	int aux = comeco_memoria_texto;
@@ -566,32 +84,650 @@ void Memoria::depuracao(){
 	}
 }
 
-class IF : protected Memoria{
+class IF{
 	
-	protected:
+	friend class controle;
+	friend class EX;
+	
+	private:
 		unsigned int PC;
 		
 	public:
-		IF(Memoria *mem);
-		bitset<tamanho_instrucao> retornar_instrucao(EX *e1);
+		IF();
+		bitset<tamanho_instrucao> retornar_instrucao(Memoria *memoria);
 };
 
-IF::IF(Memoria *mem) : Memoria(*mem){
+IF::IF(){
 	
 	PC = comeco_memoria_texto;
 }
 
-bitset<tamanho_instrucao> IF::retornar_instrucao(EX *e1){
+bitset<tamanho_instrucao> IF::retornar_instrucao(Memoria *mem){
 	
 	bitset<tamanho_instrucao> instrucao_atual;
 	
 	for(int i = 0; i < tamanho_instrucao; i++)
-		instrucao_atual[i] = memoria[PC + i];
+		instrucao_atual[i] = mem->memoria[PC + i];
 		
-	e1 -> PC = PC;	
 	PC += tamanho_instrucao;
 	
+	cout << PC << endl;
+	
 	return instrucao_atual;
+}
+
+struct instrucaoDecodificada{
+	
+	string opcode;
+	int rs;
+	int rt;
+	int rd;
+	string shamt;
+	string funct;
+	string offset_address;
+	string target;
+};
+
+class controle{
+	
+	friend class EX;
+	
+	private:
+		bool Regdst;
+		bool Regwrite;
+		string Aluctrl;
+		bool Memread;
+		bool Memwrite;
+		int Aluop;
+		bool Alusrc;
+		bool MemtoReg;
+		bool Branch;
+		bool Jump;
+		instrucaoDecodificada instrucao;
+		
+	public:
+		controle() { reset(); };
+		void reset();
+		void depuracao_controle();
+		void decodificar_instrucao(Memoria *mem, IF *estagio_IF);
+};
+
+void controle::reset(){
+	
+	Regdst = 0;
+	Regwrite = 0;
+	Aluctrl = "invalido";
+	Memread = 0;
+	Memwrite = 0;
+	Aluop = 0;
+	Alusrc = 0;
+	MemtoReg = 0;
+	Branch = 0;
+	Jump = 0;
+	instrucao.opcode = "invalido";
+	instrucao.rs = -1;
+	instrucao.rt = -1;
+	instrucao.rd = -1;
+	instrucao.shamt = "invalido";
+	instrucao.funct = "invalido";
+	instrucao.offset_address = "invalido";
+	instrucao.target = "invalido";
+}
+
+void controle::depuracao_controle(){
+	
+	cout << "Regdst: " << Regdst << endl;
+	cout << "Regwrite: " << Regwrite << endl;
+	cout << "Aluctrl: " << Aluctrl << endl;
+	cout << "Memread: " << Memread << endl;
+	cout << "Memwrite: " << Memwrite << endl;
+	cout << "Aluop: " << Aluop << endl;
+	cout << "Alusrc: " << Alusrc << endl;
+	cout << "MemtoReg: " << MemtoReg << endl;
+	cout << "Branch: " << Branch << endl;
+	cout << "Jump: " << Jump << endl;
+	cout << "opcode: " << instrucao.opcode << endl;
+	cout << "rs (endereco): " << instrucao.rs << endl;
+	cout << "rt (endereco): " << instrucao.rt << endl;
+	cout << "rd (endereco): " << instrucao.rd << endl;
+	cout << "shamt: " << instrucao.shamt << endl;
+	cout << "funct: " << instrucao.funct << endl;
+	cout << "offset ou address: " << instrucao.offset_address << endl;
+	cout << "target: " << instrucao.target << endl;
+}
+
+void controle::decodificar_instrucao(Memoria *mem, IF *estagio_IF){// Maioria não utilizada, apenas declarada.
+	
+	bitset<tamanho_instrucao> instrucao_binaria = estagio_IF->retornar_instrucao(mem);
+	string instrucao_string = instrucao_binaria.to_string();
+	
+	//tipo R
+	instrucao.opcode = instrucao_string.substr(0, 6);//extrai os 6 bits mais significativos (opcode)
+	instrucao.rs = stoi(instrucao_string.substr(6, 5));//extrai os 5 bits do primeiro operando
+	instrucao.rt = stoi(instrucao_string.substr(11, 5)); //extrai os 5 bits do segundo operando
+	instrucao.rd = stoi(instrucao_string.substr(16, 5)); //extrai os 5 bits do terceiro operando
+	instrucao.shamt = instrucao_string.substr(21, 5);//extrai os 5 bits do shamt
+	instrucao.funct = instrucao_string.substr(26, 6);//extrai os 6 bits menos significativos (funct)
+	
+	//Tipo I
+	instrucao.offset_address = instrucao_string.substr(16, 16);//extrai os 16 bits menos significativos
+	
+	//Tipo J
+	instrucao.target = instrucao_string.substr(6, 26);//extrai os 26 bits menos significativos
+	
+	//O opcode dela é diferente, daí o if separado.
+	//instrução mul R-Type difere do mult em relação aos bits, acredito eu 
+	if(instrucao.opcode == "011100" and instrucao.funct=="000010"){ //mul instruction, R-Type
+			Regdst = 1;
+			Regwrite = 1;
+			Alusrc = 0;
+			Aluop = 10;
+			MemtoReg = 0;
+			Jump = 0;
+			Branch = 0;
+			Memwrite = 0;
+			Memread = 0;
+			Aluctrl = "mul";
+	}
+	
+	// Instruções do tipo R
+	if(instrucao.opcode == "000000"){
+		
+		if(instrucao.funct == "100000"){
+			//return add
+			Regdst = 1;
+			Regwrite = 1;
+			Alusrc = 0;
+			Aluop = 10;
+			MemtoReg = 0;
+			Jump = 0;
+			Branch = 0;
+			Memwrite = 0;
+			Memread = 0;
+			Aluctrl = "add";
+		}
+		
+		else if(instrucao.funct == "100010"){//sub --verificado
+			Regdst = 1;
+			Regwrite = 1;
+			Alusrc = 1;
+			Aluop = 10;
+			MemtoReg = 0;
+			Jump = 0;
+			Branch = 0;
+			Memwrite = 0;
+			Memread = 0;
+			Aluctrl = "sub";
+		}
+		
+		else if(instrucao.funct == "100100"){//and
+			Regdst = 1;
+			Regwrite = 1;
+			Alusrc = 0;
+			Aluop = 00;
+			MemtoReg = 0;
+			Jump = 0;
+			Branch = 0;
+			Memwrite = 0;
+			Memread = 0;
+			Aluctrl = "and";
+		}
+		
+		else if(instrucao.funct == "011000"){//mult -- 64 bits em 2 registradores de saída -- corrigida
+			Regdst = 0;
+			Regwrite = 0;
+			Alusrc = 0;
+			Aluop = 11;
+			MemtoReg = 0;
+			Jump = 0;
+			Branch = 0;
+			Memwrite = 0;
+			Memread = 0;
+			Aluctrl = "mult";
+		}
+		
+		else if(instrucao.funct == "100101"){//or --corrigido
+			Regdst = 1;
+			Regwrite = 1;
+			Alusrc = 0;
+			Aluop = 01;
+			//nao sao utilizados
+			MemtoReg = 0;
+			Jump = 0;
+			Branch = 0;
+			Memwrite = 0;
+			Memread = 0;
+			Aluctrl = "or";
+		}
+		
+		else if(instrucao.funct == "100111"){ //nor --corrigido
+			Regdst = 1;
+			Regwrite = 1;
+			Alusrc = 0;
+			Aluop = 11;
+			//nao sao utilizados
+			MemtoReg = 0;
+			Jump = 0;
+			Branch = 0;
+			Memwrite = 0;
+			Memread = 0;
+			Aluctrl = "nor";
+		}
+		
+		else if(instrucao.funct == "000000"){//sll -- verificar -- ok aparentemente
+			Regdst = 0;
+			Regwrite = 1;
+			Alusrc = 1;
+			Aluop = 10;
+			MemtoReg = 0;
+			Memwrite = 0;
+			Memread = 0;
+			Jump = 0;
+			Branch = 0;
+			Aluctrl = "sll";
+		}
+		
+		else if(instrucao.funct == "000010"){//srl esta igual ao sub, mas acredito estar correto.
+			Regdst = 1;
+			Regwrite = 1;
+			Alusrc = 1;
+			Aluop = 10;
+			MemtoReg = 0;
+			Jump = 0;
+			Branch = 0;
+			Memwrite = 0;
+			Memread = 0;
+			Aluctrl = "srl";
+		}
+		
+		else if(instrucao.funct == "011010"){ //div -- ok
+			Regdst = 0;
+			Regwrite = 1;
+			Alusrc = 0;
+			Aluop = 11;
+			MemtoReg = 0;
+			Jump = 0;
+			Branch = 0;
+			Memwrite = 0;
+			Memread = 0;
+			Aluctrl = "div";
+		}
+		
+		else if(instrucao.funct == "101010"){//slt -- verificado
+			Regdst = 1;
+			Regwrite = 1;
+			Alusrc = 0;
+			Aluop = 11;
+			MemtoReg = 0;
+			Jump = 0;
+			Branch = 0;
+			Memwrite = 0;
+			Memread = 0;
+			Aluctrl = "slt";
+		}
+		
+		else if(instrucao.funct == "001000"){// jr
+			Regdst = 0;
+			Regwrite = 0;
+			Alusrc = 0;
+			Aluop = 0; 
+			MemtoReg = 0;
+			Jump = 1;
+			Branch = 0;
+			Memwrite = 0;
+			Memread = 0;
+			Aluctrl = "jr";
+		}
+		
+		else{
+			cout<<"ERRO - Instrucao nao identificada"<<endl;
+		}
+	}
+	
+	//Instruções do tipo J
+	//j
+	else if(instrucao.opcode == "000010"){
+			Regdst = 0;
+			Regwrite = 0;
+			Alusrc = 0;
+			Aluop = 0;
+			MemtoReg = 0;
+			Jump = 1;
+			Branch = 0;
+			Memwrite = 0;
+			Memread = 0;
+			Aluctrl = "j";
+	}
+	
+	//jal
+	else if(instrucao.opcode == "000011"){
+			Regdst = 0;
+			Regwrite = 1;
+			Alusrc = 0;
+			Aluop = 0;
+			MemtoReg = 0;
+			Jump = 1;
+			Branch = 0;
+			Memwrite = 0;
+			Memread = 0;
+			Aluctrl = "jal";
+	}
+	
+	//Instruções do tipo I
+	else{
+		if(instrucao.opcode == "001000" ){ //addi
+			Regdst = 0;
+			Regwrite = 1;
+			Alusrc = 1;
+			Aluop = 10;
+			MemtoReg = 0;
+			Jump = 0;
+			Branch = 0;
+			Memwrite = 0;
+			Memread = 0;
+			Aluctrl = "addi";
+		}
+		
+		else if(instrucao.opcode == "100011"){ //lw
+			Regdst = 0;
+			Regwrite = 1;
+			Alusrc = 1;
+			Aluop = 00;
+			MemtoReg = 1;
+			Jump = 0;
+			Branch = 0;
+			Memwrite = 0;
+			Memread = 1;
+			Aluctrl = "lw";
+		}
+		
+		else if(instrucao.opcode == "101011") { //sw
+			Regdst = 0;
+			Regwrite = 0;
+			Alusrc = 1;
+			Aluop = 00;
+			MemtoReg = 0;
+			Jump = 0;
+			Branch = 0;
+			Memwrite = 1;
+			Memread = 0;
+			Aluctrl = "sw";
+		}
+		
+		else if(instrucao.opcode == "000100"){ //beq
+			Regdst = 0;
+			Regwrite = 0;
+			Alusrc = 0;
+			Aluop = 01;
+			MemtoReg = 0;
+			Jump = 0;
+			Branch = 1;
+			Memwrite = 0;
+			Memread = 0;
+			Aluctrl = "beq";
+		}
+		
+		else if(instrucao.opcode == "000101"){ //bne
+			Regdst = 0;
+			Regwrite = 0;
+			Alusrc = 0;
+			Aluop = 01;
+			MemtoReg = 0;
+			Jump = 0;
+			Branch = 1;
+			Memwrite = 0;
+			Memread = 0;
+			Aluctrl = "bne";
+		}
+		
+		else{
+			cout<<" ERRO - Instrucao nao identificada"<<endl;
+		}
+	}
+}
+
+class Registradores{
+	
+	friend class EX;
+	
+	private:
+		bitset<tamanho_instrucao> zero; // valor constante de zero
+		bitset<tamanho_instrucao> at; // reservado pelo compilador
+		bitset<tamanho_instrucao> v0, v1; // variáveis para retorno de funções e outras utilidades
+		bitset<tamanho_instrucao> a0, a1, a2, a3; // argumentos
+		bitset<tamanho_instrucao> t0, t1, t2, t3, t4, t5, t6, t7; // variáveis temporárias
+		bitset<tamanho_instrucao> s0, s1, s2, s3, s4, s5, s6, s7; // variáveis salvas
+		bitset<tamanho_instrucao> t8, t9; // variáveis usadas na adição dos temporários
+		bitset<tamanho_instrucao> k0, k1; // reservado pelo OS
+		bitset<tamanho_instrucao> *gp; // global pointer
+		bitset<tamanho_instrucao> *sp; //stack pointer
+		bitset<tamanho_instrucao> *fp; //frame pointer
+		bitset<tamanho_instrucao> ra; // retorno de função
+		bitset<tamanho_instrucao> HIGH;
+		bitset<tamanho_instrucao> LOW;
+		
+	public:
+		Registradores();
+		~Registradores();
+		bitset<tamanho_instrucao> retornar_registrador(int numero_registrador);
+};
+
+Registradores::Registradores(){
+	
+	gp = new bitset<tamanho_instrucao>;
+	sp = new bitset<tamanho_instrucao>;
+	fp = new bitset<tamanho_instrucao>;
+}
+
+Registradores::~Registradores(){
+	
+	delete[] gp;
+	delete[] sp;
+	delete[] fp;
+}
+
+bitset<tamanho_instrucao> Registradores::retornar_registrador(int numero_registrador){
+	
+	if(numero_registrador == 0) return zero;
+	if(numero_registrador == 1) return at;
+	if(numero_registrador == 2) return v0;
+	if(numero_registrador == 3) return v1;
+	if(numero_registrador == 4) return a0;
+	if(numero_registrador == 5) return a1;
+	if(numero_registrador == 6) return a2;
+	if(numero_registrador == 7) return a3;
+	if(numero_registrador == 8) return t0;
+	if(numero_registrador == 9) return t1;
+	if(numero_registrador == 10) return t2;
+	if(numero_registrador == 11) return t3;
+	if(numero_registrador == 12) return t4;
+	if(numero_registrador == 13) return t5;
+	if(numero_registrador == 14) return t6;
+	if(numero_registrador == 15) return t7;
+	if(numero_registrador == 16) return s0;
+	if(numero_registrador == 17) return s1;
+	if(numero_registrador == 18) return s2;
+	if(numero_registrador == 19) return s3;
+	if(numero_registrador == 20) return s4;
+	if(numero_registrador == 21) return s5;
+	if(numero_registrador == 22) return s6;
+	if(numero_registrador == 23) return s7;
+	if(numero_registrador == 24) return t8;
+	if(numero_registrador == 25) return t9;
+	if(numero_registrador == 26) return k0;
+	if(numero_registrador == 27) return k1;
+	if(numero_registrador == 28) return *gp;
+	if(numero_registrador == 29) return *sp;
+	if(numero_registrador == 30) return *fp;
+	if(numero_registrador == 31) return ra;
+	
+	throw runtime_error("ERRO LEITURA DO REGISTRADOR - o registrador lido nao pertence ao conjunto de registradores existentes!");
+}
+
+class EX{
+	
+	private:
+		int HI = 0, LO = 0, sa = 0, r31 = 0;
+		bool ALUzero = 0;
+		void instrucoes_aritmeticas(controle *estagio_controle, Registradores *reg);
+		void instrucoes_de_desvio(controle *estagio_controle, IF *estagio_IF, Registradores *reg);
+		
+	public:
+		void ALU(controle *estagio_controle, IF *estagio_IF, Registradores *reg);
+};
+
+void EX::ALU(controle *estagio_controle, IF *estagio_IF, Registradores *reg){
+	
+	if((estagio_controle->Branch == 0) and (estagio_controle->Jump == 0) and (estagio_controle->Memwrite == 0) and (estagio_controle->Memread == 0)){
+		instrucoes_aritmeticas(estagio_controle, reg); //Realiza os calculos aritmeticos
+	}
+	
+	else if((estagio_controle->Branch == 1) or (estagio_controle->Jump == 1)){
+		instrucoes_de_desvio(estagio_controle, estagio_IF, reg); //Realiza os calculos dos desvios
+	}
+}
+
+void EX::instrucoes_aritmeticas(controle *estagio_controle, Registradores *reg){
+	
+	unsigned long valor_rs = 0;
+	unsigned long valor_rt = 0;
+	
+	try{
+		
+		valor_rs = (reg->retornar_registrador(estagio_controle->instrucao.rs)).to_ulong();
+		valor_rt = (reg->retornar_registrador(estagio_controle->instrucao.rt)).to_ulong();
+	}
+	catch(exception& e){
+		
+		cout << e.what();
+	}
+	
+	unsigned long resultado = 0;
+	
+	//add
+	if(estagio_controle->Aluctrl == "add"){
+		resultado = valor_rs + valor_rt;
+		cout<<"É uma instrução de add"<<endl;
+	}
+	//sub
+	if(estagio_controle->Aluctrl == "sub"){
+		resultado = valor_rs - valor_rt;
+		cout<<"É uma instrução de sub"<<endl;
+	}
+	//addi
+	if(estagio_controle->Aluctrl == "addi"){
+		valor_rt = valor_rs + stoi(estagio_controle->instrucao.offset_address);
+		cout<<"É uma instrução de addi"<<endl;
+	}
+	//and
+	if(estagio_controle->Aluctrl == "and"){
+		resultado = (valor_rs & valor_rt);
+		cout<<"É uma instrução de and"<<endl;
+	}
+	//or
+	if(estagio_controle->Aluctrl == "or"){
+		resultado = (valor_rs | valor_rt);
+		cout<<"É uma instrução de or"<<endl;
+	}
+	//nor
+	if(estagio_controle->Aluctrl == "nor"){
+		resultado = ~(valor_rs | valor_rt);
+		cout<<"É uma instrução de nor"<<endl;
+	}
+	//mult
+	if(estagio_controle->Aluctrl == "mult"){
+		HI = valor_rs * valor_rt;
+		LO = HI;
+		cout<<"É uma instrução de mult"<<endl;
+	}
+	//sll
+	if(estagio_controle->Aluctrl == "sll"){
+		resultado = valor_rt << sa;
+		cout<<"É uma instrução de sll"<<endl;
+	}
+	//srl
+	if(estagio_controle->Aluctrl == "srl"){
+		resultado = valor_rt >> sa;
+		cout<<"É uma instrução de srl"<<endl;
+	}
+	//mul
+	if(estagio_controle->Aluctrl == "mul"){
+		resultado = valor_rs * valor_rt;
+		cout<<"É uma instrução de mul"<<endl;
+	}
+	//div
+	if(estagio_controle->Aluctrl == "div"){
+		HI = valor_rs % valor_rt; 
+		LO = valor_rs / valor_rt;
+		cout<<"É uma instrução de div"<<endl;
+	}
+	//slt
+	if(estagio_controle->Aluctrl == "slt"){
+		resultado = valor_rs < valor_rt;
+		cout<<"É uma instrução de slt"<<endl;
+	}
+	
+	//Verifica se algum resultado corresponde a 0 para acionar a flag.
+	
+	if(((resultado == 0) or (valor_rt == 0)) and ((HI == 0) and (LO == 0))){ //Tenho que checar com calma
+		ALUzero = 1;
+	}
+	
+	cout<<endl;
+}
+
+void EX::instrucoes_de_desvio(controle *estagio_controle, IF *estagio_IF, Registradores *reg){
+	
+	unsigned long valor_rs = 0;
+	unsigned long valor_rt = 0;
+	
+	try{
+		
+		valor_rs = (reg->retornar_registrador(estagio_controle->instrucao.rs)).to_ulong();
+		valor_rt = (reg->retornar_registrador(estagio_controle->instrucao.rt)).to_ulong();
+	}
+	catch(exception& e){
+		
+		cout << e.what();
+	}
+	
+	//beq
+	if(estagio_controle->Aluctrl == "beq"){ 
+		if(valor_rs == valor_rt){
+			estagio_IF->PC += estagio_controle->instrucao.offset_address * 4;
+		}
+		cout<<"É uma instrução de beq"<<endl;
+	}
+	//bne
+	if(estagio_controle->Aluctrl == "bne"){
+		if(instrucao.rs != instrucao.rt){ 
+			PC += instrucao.offset_address * 4;
+		}
+		cout<<"É uma instrução de bne"<<endl;
+	}
+	//j
+	if(estagio_controle->Aluctrl == "j"){
+		bitset<32> num_binario(PC);
+		bitset<4> pc_upper_binario(num_binario.to_string().substr(0,4));
+		int pc_upper = (int)pc_upper_binario.to_ulong();
+		
+		PC = pc_upper + (instrucao.target * 4);
+		
+		cout<<"É uma instrução de j"<<endl;
+	}
+	//jal
+	if(estagio_controle->Aluctrl == "jal"){
+		r31 = PC; 
+		PC = instrucao.target * 4;
+		cout<<"É uma instrução de jal"<<endl;
+	}
+	//jr
+	if(estagio_controle->Aluctrl == "jr"){
+		estagio_IF->PC = estagio_controle->instrucao.rs;
+		cout<<"É uma instrução de jr"<<endl;
+	}
+	
+	cout <<"Desvio em decimal: "<< estagio_IF->PC << endl << endl;
 }
 
 int main(){
@@ -615,22 +751,56 @@ int main(){
 		
 		if(integridade){
 			
-			IF estagio_IF(mem);
+			unsigned int qtd_instrucoes = mem->get_quantidade_instrucoes();
+			int cont_restante_instrucoes = qtd_instrucoes;
 			
-			mem->depuracao();
+			cout << qtd_instrucoes << endl;
 			
-			cout << "#####################" << endl;
-			
-			for(int i = 0; i < 21; i++){
+			if(qtd_instrucoes >= 1){
 				
-				EX e1;
-				bitset<tamanho_instrucao> aux = estagio_IF.retornar_instrucao(&e1);
+				IF *estagio_IF = new IF();
 				
-				cout << aux << endl;
+				mem->depuracao_memoria();
 				
-				e1.ALU(aux);
+				controle *estagio_controle = new controle();
+				
+				estagio_controle->depuracao_controle();
+				
+				cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
+				
+				estagio_controle->decodificar_instrucao(mem, estagio_IF);
+				
+				cout << "#####################" << endl;
+				
+				estagio_controle->depuracao_controle();
+				
+				Registradores *reg = new Registradores();
+				EX *estagio_execucao = new EX();
+				
+				estagio_execucao->ALU(estagio_controle, estagio_IF, reg);
+				
+				cout << "@@@@@@@@@@@@@@@@@@@@@" << endl;
+				
+				cont_restante_instrucoes--;
+				
+				while(cont_restante_instrucoes != 0){
+					
+					estagio_controle->reset();
+					estagio_controle->decodificar_instrucao(mem, estagio_IF);
+					estagio_controle->depuracao_controle();
+					
+					estagio_execucao->ALU(estagio_controle, estagio_IF, reg);
+					
+					cout << "@@@@@@@@@@@@@@@@@@@@@" << endl;
+					
+					cont_restante_instrucoes--;
+				}
+				
+				delete estagio_IF;
+				delete estagio_controle;
+				delete reg;
+				delete estagio_execucao;
 			}
-			
 		}
 		
 		delete mem;
