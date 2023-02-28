@@ -20,8 +20,6 @@ struct instrucaoDecodificada {
     int rd;
     string shamt;
     string funct;
-    string offset;
-    string address;
 };
 
 class controle {
@@ -39,6 +37,10 @@ class controle {
         bool MemtoReg;
         bool Branch;
         bool Jump;
+        
+        string offset;
+        string address;
+        
     public :
         void decodificar_instrucao(string instrucao_binaria);
 
@@ -62,10 +64,10 @@ void controle :: decodificar_instrucao (string instrucao_binaria){// Maioria nã
     instrucao.shamt = instrucao_binaria.substr(21, 5);//"            "
     instrucao.funct = instrucao_binaria.substr(26, 6);//extrai os 6 bits menos significativos
     //Tipo I
-    instrucao.offset = instrucao_binaria.substr(16, 16);//extrai os 16 bits menos significativos
+    offset = instrucao_binaria.substr(16, 16);//extrai os 16 bits menos significativos
 
     //Tipo J
-    instrucao.address = instrucao_binaria.substr(6, 26);//extrai os 26 bits menos significativos
+    address = instrucao_binaria.substr(6, 26);//extrai os 26 bits menos significativos
 
 
     //O opcode dela é diferente, daí o if separado.
@@ -339,95 +341,163 @@ void controle :: decodificar_instrucao (string instrucao_binaria){// Maioria nã
                 }
         }
 
-
 }
 
 class EX{
 	
-	private:
+private:
+	
+	int rs = 10; //supondo que o registrador1 seja igual a 10
+	int rt = 15; //supondo que o registrador2 seja igual a 15
+	int rd = 0, HI = 0, LO = 0, imm = 0, sa = 0, r31 = 0;
+	
+	void instrucoes_de_desvio (bitset<tamanho_instrucao> instrucao_atual, controle instrucao);
+	void instrucoes_aritmeticas(bitset<tamanho_instrucao> instrucao_atual, controle instrucao);
 		
-		void instrucoes_aritmeticas(bitset<tamanho_instrucao> instrucao_atual){
-			
-			string aux = instrucao_atual.to_string();
-			
-			controle instrucao;
-			instrucao.decodificar_instrucao(aux);
-			
-			int rs = 10; //supondo que o registrador1 seja igual a 10
-			int rt = 15; //supondo que o registrador2 seja igual a 15
-			int rd = 0, HI = 0, LO = 0, imm = 0, sa = 0;
-			
-			//add
-			if (instrucao.Aluctrl == "add"){ 
-				rd = rs + rt;
-				cout<<"É uma instrução de add"<<endl;
-			}
-			//sub
-			if (instrucao.Aluctrl == "sub"){ // sub
-				rd = rs - rt;
-				cout<<"É uma instrução de sub"<<endl;
-			}
-			//addi
-			if (instrucao.Aluctrl == "addi"){ // addi
-				rt = rs + imm;
-				cout<<"É uma instrução de addi"<<endl;
-			}
-			//and
-			if (instrucao.Aluctrl == "and"){ // and
-				rd = (rs & rt);
-				cout<<"É uma instrução de and"<<endl;
-			}
-			//or
-			if (instrucao.Aluctrl == "or"){ // or
-				rd = (rs | rt);
-				cout<<"É uma instrução de or"<<endl;
-			}
-			//nor
-			if (instrucao.Aluctrl == "nor"){ // nor
-				rd = ~(rs | rt);
-				cout<<"É uma instrução de nor"<<endl;
-			}
-			//mult
-			if (instrucao.Aluctrl == "mult"){ // mult
-				HI = rs * rt;
-				LO = HI;
-				cout<<"É uma instrução de mult"<<endl;
-			}
-			//sll
-			if (instrucao.Aluctrl == "sll"){ // sll
-				rd = rt << sa;
-				cout<<"É uma instrução de sll"<<endl;
-			}
-			//srl
-			if (instrucao.Aluctrl == "srl"){ // srl
-				rd = rt >> sa;
-				cout<<"É uma instrução de srl"<<endl;
-			}
-			//mul
-			if (instrucao.Aluctrl == "mul"){ // mul
-				rd = rs * rt;
-				cout<<"É uma instrução de mul"<<endl;
-			}
-			//div
-			if (instrucao.Aluctrl == "div"){ // div
-				HI = rs % rt; 
-				LO = rs / rt;
-				cout<<"É uma instrução de div"<<endl;
-			}
-			
-			cout<<endl;
-			cout<<"Valor do Resgistrador de Destino: "<<rd<<endl;
-			cout<<"Valor do Hi: "<<HI<<endl;
-			cout<<"Valor do Lo: "<<LO<<endl;
-			cout<<endl;
-			
-		}
+public:
+	
+	unsigned int PC;
+	bool ALUzero = 0;
+	void ALU (bitset<tamanho_instrucao> instrucao_atual);
 		
-	public:
-		void ALU (bitset<tamanho_instrucao> instrucao_atual){
-			instrucoes_aritmeticas(instrucao_atual); //Realiza os calculos aritmeticos
-		}
 };
+	
+void EX::ALU(bitset<tamanho_instrucao> instrucao_atual){
+			
+	controle instrucao;
+			
+	string aux = instrucao_atual.to_string();
+	instrucao.decodificar_instrucao(aux);
+			
+	if((instrucao.Branch == 0) and (instrucao.Jump == 0) and (instrucao.Memwrite == 0) and (instrucao.Memread == 0)){
+		instrucoes_aritmeticas(instrucao_atual, instrucao); //Realiza os calculos aritmeticos
+	}
+	else if ((instrucao.Branch == 1) or (instrucao.Jump == 1)){
+		instrucoes_de_desvio(instrucao_atual, instrucao); //Realiza os calculos dos desvios
+	}
+			
+}
+
+void EX::instrucoes_aritmeticas(bitset<tamanho_instrucao> instrucao_atual, controle instrucao){
+			
+	//add
+	if (instrucao.Aluctrl == "add"){ 
+		rd = rs + rt;
+		cout<<"É uma instrução de add"<<endl;
+	}
+	//sub
+	if (instrucao.Aluctrl == "sub"){
+		rd = rs - rt;
+		cout<<"É uma instrução de sub"<<endl;
+	}
+	//addi
+	if (instrucao.Aluctrl == "addi"){
+		rt = rs + imm;
+		cout<<"É uma instrução de addi"<<endl;
+	}
+	//and
+	if (instrucao.Aluctrl == "and"){
+		rd = (rs & rt);
+		cout<<"É uma instrução de and"<<endl;
+	}
+	//or
+	if (instrucao.Aluctrl == "or"){
+		rd = (rs | rt);
+		cout<<"É uma instrução de or"<<endl;
+	}
+	//nor
+	if (instrucao.Aluctrl == "nor"){
+		rd = ~(rs | rt);
+		cout<<"É uma instrução de nor"<<endl;
+	}
+	//mult
+	if (instrucao.Aluctrl == "mult"){
+		HI = rs * rt;
+		LO = HI;
+		cout<<"É uma instrução de mult"<<endl;
+	}
+	//sll
+	if (instrucao.Aluctrl == "sll"){
+		rd = rt << sa;
+		cout<<"É uma instrução de sll"<<endl;
+	}
+	//srl
+	if (instrucao.Aluctrl == "srl"){
+		rd = rt >> sa;
+		cout<<"É uma instrução de srl"<<endl;
+	}
+	//mul
+	if (instrucao.Aluctrl == "mul"){
+		rd = rs * rt;
+		cout<<"É uma instrução de mul"<<endl;
+	}
+	//div
+	if (instrucao.Aluctrl == "div"){
+		HI = rs % rt; 
+		LO = rs / rt;
+		cout<<"É uma instrução de div"<<endl;
+	}
+	//slt
+	if (instrucao.Aluctrl == "slt"){
+		rd = rs < rt;
+		cout<<"É uma instrução de slt"<<endl;
+	}
+			
+	//Verifica se algum resultado corresponde a 0 para acionar a flag.
+			
+	if(((rd == 0) or (rt == 0)) and ((HI == 0) and (LO == 0))){ //Tenho que checar com calma
+		ALUzero = 1;
+	}
+			
+	cout<<endl;
+			
+}
+
+void EX::instrucoes_de_desvio(bitset<tamanho_instrucao> instrucao_atual, controle instrucao){
+			
+	int offset = bitset<16>(instrucao.offset).to_ulong();
+	int target = bitset<26>(instrucao.address).to_ulong();
+			
+	//beq
+	if (instrucao.Aluctrl == "beq"){ 
+		if(rs == rt){
+			PC += offset * 4;
+		}
+		cout<<"É uma instrução de beq"<<endl;
+	}
+	//bne
+	if (instrucao.Aluctrl == "bne"){
+		if(rs != rt){ 
+			PC += offset * 4;
+		}
+		cout<<"É uma instrução de bne"<<endl;
+	}
+	//j
+	if (instrucao.Aluctrl == "j"){
+				
+		bitset<32> num_binario(PC);
+		bitset<4> pc_upper_binario(num_binario.to_string().substr(0,4));
+		int pc_upper = (int)pc_upper_binario.to_ulong();
+				
+		PC = pc_upper + (target * 4);
+		cout<<"É uma instrução de j"<<endl;
+				
+	}
+	//jal
+	if (instrucao.Aluctrl == "jal"){
+		r31 = PC; 
+		PC = target * 4;
+		cout<<"É uma instrução de jal"<<endl;
+	}
+	//jr
+	if (instrucao.Aluctrl == "jr"){
+		PC = rs;
+		cout<<"É uma instrução de jr"<<endl;
+	}
+			
+	cout <<"Desvio em decimal: "<< PC << endl << endl;
+			
+}
 
 class Memoria{
 	
@@ -492,9 +562,6 @@ void Memoria::depuracao(){
 			
 		cout << instrucao_atual << endl;
 		
-		EX instrucao;
-		instrucao.ALU(instrucao_atual);
-		
 		aux += tamanho_instrucao;
 	}
 }
@@ -506,7 +573,7 @@ class IF : protected Memoria{
 		
 	public:
 		IF(Memoria *mem);
-		bitset<tamanho_instrucao> retornar_instrucao();
+		bitset<tamanho_instrucao> retornar_instrucao(EX *e1);
 };
 
 IF::IF(Memoria *mem) : Memoria(*mem){
@@ -514,13 +581,14 @@ IF::IF(Memoria *mem) : Memoria(*mem){
 	PC = comeco_memoria_texto;
 }
 
-bitset<tamanho_instrucao> IF::retornar_instrucao(){
+bitset<tamanho_instrucao> IF::retornar_instrucao(EX *e1){
 	
 	bitset<tamanho_instrucao> instrucao_atual;
 	
 	for(int i = 0; i < tamanho_instrucao; i++)
 		instrucao_atual[i] = memoria[PC + i];
 		
+	e1 -> PC = PC;	
 	PC += tamanho_instrucao;
 	
 	return instrucao_atual;
@@ -553,8 +621,16 @@ int main(){
 			
 			cout << "#####################" << endl;
 			
-			for(int i = 0; i < 21; i++)
-				cout << estagio_IF.retornar_instrucao() << endl;
+			for(int i = 0; i < 21; i++){
+				
+				EX e1;
+				bitset<tamanho_instrucao> aux = estagio_IF.retornar_instrucao(&e1);
+				
+				cout << aux << endl;
+				
+				e1.ALU(aux);
+			}
+			
 		}
 		
 		delete mem;
