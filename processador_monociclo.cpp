@@ -11,6 +11,8 @@ using namespace std;
 #define comeco_memoria_texto 256
 #define comeco_memoria_dados 3456
 
+class controle;
+
 class Memoria{
 	
 	friend class IF;
@@ -25,6 +27,7 @@ class Memoria{
 		Memoria(ifstream& arquivo_entrada);
 		unsigned int get_quantidade_instrucoes() { return quantidade_instrucoes; };
 		void depuracao_memoria();
+		void memoriaDados(controle *estagio_controle, bitset<tamanho_instrucao>somaOff, bitset<tamanho_instrucao>DadoRd);
 };
 
 Memoria::Memoria(ifstream& arquivo_entrada){
@@ -84,6 +87,30 @@ void Memoria::depuracao_memoria(){
 	}
 }
 
+void Memoria::memoriaDados(controle *estagio_controle, bitset<tamanho_instrucao>somaOff, bitset<tamanho_instrucao>DadoRd){
+		
+	long somaOn=somaOff.to_ulong();
+		
+	if(estagio_controle->Memread == 1 and estagio_controle->Memwrite == 0){ //sw
+		if(somaOn>=comeco_memoria_dados and somaOn<=(final_memoria_dados-tamanho_instrucao)){
+			for(int i=0;i<tamanho_instrucao;i++){
+				memoria[somaOn+i] = DadoRd[i];
+			}
+		}
+	}
+	
+	else{
+		cout<<"DA NÂO";
+	}
+	
+	if(Memread == 0 and Memwrite == 1){//lw
+		for(int i=0,i<tamanho_instrucao;i++){
+			retorno_reg[i] = memoria[somaOn + i];
+		}
+	}
+	
+}
+
 class IF{
 	
 	friend class controle;
@@ -131,6 +158,7 @@ struct instrucaoDecodificada{
 class controle{
 	
 	friend class EX;
+	friend class Memoria;
 	
 	private:
 		bool Regdst;
