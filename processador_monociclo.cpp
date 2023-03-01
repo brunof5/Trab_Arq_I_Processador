@@ -10,12 +10,12 @@ using namespace std;
 #define tamanho_instrucao 32
 #define comeco_memoria_texto 256
 #define comeco_memoria_dados 3456
-
-class controle;
+#define final_memoria_dados 255999
 
 class Memoria{
 	
 	friend class IF;
+	friend class MEM;
 	
 	private:
 		// 64000 endereços * 4 bytes cada = 256000
@@ -27,7 +27,6 @@ class Memoria{
 		Memoria(ifstream& arquivo_entrada);
 		unsigned int get_quantidade_instrucoes() { return quantidade_instrucoes; };
 		void depuracao_memoria();
-		void memoriaDados(controle *estagio_controle, bitset<tamanho_instrucao>somaOff, bitset<tamanho_instrucao>DadoRd);
 };
 
 Memoria::Memoria(ifstream& arquivo_entrada){
@@ -87,33 +86,9 @@ void Memoria::depuracao_memoria(){
 	}
 }
 
-void Memoria::memoriaDados(controle *estagio_controle, bitset<tamanho_instrucao>somaOff, bitset<tamanho_instrucao>DadoRd){
-		
-	long somaOn=somaOff.to_ulong();
-		
-	if(estagio_controle->Memread == 1 and estagio_controle->Memwrite == 0){ //sw
-		if(somaOn>=comeco_memoria_dados and somaOn<=(final_memoria_dados-tamanho_instrucao)){
-			for(int i=0;i<tamanho_instrucao;i++){
-				memoria[somaOn+i] = DadoRd[i];
-			}
-		}
-	}
-	
-	else{
-		cout<<"DA NÂO";
-	}
-	
-	if(Memread == 0 and Memwrite == 1){//lw
-		for(int i=0,i<tamanho_instrucao;i++){
-			retorno_reg[i] = memoria[somaOn + i];
-		}
-	}
-	
-}
-
 class IF{
 	
-	friend class controle;
+	friend class Controle;
 	friend class EX;
 	
 	private:
@@ -122,6 +97,7 @@ class IF{
 	public:
 		IF();
 		bitset<tamanho_instrucao> retornar_instrucao(Memoria *memoria);
+		void mostrar_valor_atual_PC() { cout << "Valor atual do PC: " << PC << endl; };
 };
 
 IF::IF(){
@@ -138,8 +114,6 @@ bitset<tamanho_instrucao> IF::retornar_instrucao(Memoria *mem){
 		
 	PC += tamanho_instrucao;
 	
-	cout << PC << endl;
-	
 	return instrucao_atual;
 }
 
@@ -155,10 +129,11 @@ struct instrucaoDecodificada{
 	string target;
 };
 
-class controle{
+class Controle{
 	
 	friend class EX;
 	friend class Memoria;
+	friend class MEM;
 	
 	private:
 		bool Regdst;
@@ -174,13 +149,13 @@ class controle{
 		instrucaoDecodificada instrucao;
 		
 	public:
-		controle() { reset(); };
+		Controle() { reset(); };
 		void reset();
 		void depuracao_controle();
 		void decodificar_instrucao(Memoria *mem, IF *estagio_IF);
 };
 
-void controle::reset(){
+void Controle::reset(){
 	
 	Regdst = 0;
 	Regwrite = 0;
@@ -202,18 +177,19 @@ void controle::reset(){
 	instrucao.target = "invalido";
 }
 
-void controle::depuracao_controle(){
+void Controle::depuracao_controle(){
 	
 	cout << "Regdst: " << Regdst << endl;
 	cout << "Regwrite: " << Regwrite << endl;
-	cout << "Aluctrl: " << Aluctrl << endl;
+	cout << "Alusrc: " << Alusrc << endl;
 	cout << "Memread: " << Memread << endl;
 	cout << "Memwrite: " << Memwrite << endl;
-	cout << "Aluop: " << Aluop << endl;
-	cout << "Alusrc: " << Alusrc << endl;
 	cout << "MemtoReg: " << MemtoReg << endl;
-	cout << "Branch: " << Branch << endl;
 	cout << "Jump: " << Jump << endl;
+	cout << "Branch: " << Branch << endl;
+	cout << "Aluop: " << Aluop << endl;
+	/*
+	cout << "Aluctrl: " << Aluctrl << endl;
 	cout << "opcode: " << instrucao.opcode << endl;
 	cout << "rs (endereco): " << instrucao.rs << endl;
 	cout << "rt (endereco): " << instrucao.rt << endl;
@@ -222,9 +198,10 @@ void controle::depuracao_controle(){
 	cout << "funct: " << instrucao.funct << endl;
 	cout << "offset ou address: " << instrucao.offset_address << endl;
 	cout << "target: " << instrucao.target << endl;
+	*/
 }
 
-void controle::decodificar_instrucao(Memoria *mem, IF *estagio_IF){// Maioria não utilizada, apenas declarada.
+void Controle::decodificar_instrucao(Memoria *mem, IF *estagio_IF){// Maioria não utilizada, apenas declarada.
 	
 	bitset<tamanho_instrucao> instrucao_binaria = estagio_IF->retornar_instrucao(mem);
 	string instrucao_string = instrucao_binaria.to_string();
@@ -517,6 +494,7 @@ void controle::decodificar_instrucao(Memoria *mem, IF *estagio_IF){// Maioria n�
 class Registradores{
 	
 	friend class EX;
+	friend class MEM;
 	
 	private:
 		bitset<tamanho_instrucao> zero; // valor constante de zero
@@ -594,17 +572,23 @@ bitset<tamanho_instrucao> Registradores::retornar_registrador(int numero_registr
 
 class EX{
 	
+	friend class MEM;
+	
 	private:
-		int HI = 0, LO = 0, sa = 0, r31 = 0;
+		int HI = 0, LO = 0, sa = 0;
+		unsigned long valor_novo_ra = comeco_memoria_texto;
+		unsigned long valor_novo_PC = comeco_memoria_texto;
 		bool ALUzero = 0;
-		void instrucoes_aritmeticas(controle *estagio_controle, Registradores *reg);
-		void instrucoes_de_desvio(controle *estagio_controle, IF *estagio_IF, Registradores *reg);
+		unsigned long resultado_endereco;
+		void instrucoes_aritmeticas(Controle *estagio_controle, Registradores *reg);
+		void instrucoes_de_desvio(Controle *estagio_controle, IF *estagio_IF, Registradores *reg);
 		
 	public:
-		void ALU(controle *estagio_controle, IF *estagio_IF, Registradores *reg);
+		void ALU(Controle *estagio_controle, IF *estagio_IF, Registradores *reg);
+		void mostrar_flags_desvio();
 };
 
-void EX::ALU(controle *estagio_controle, IF *estagio_IF, Registradores *reg){
+void EX::ALU(Controle *estagio_controle, IF *estagio_IF, Registradores *reg){
 	
 	if((estagio_controle->Branch == 0) and (estagio_controle->Jump == 0) and (estagio_controle->Memwrite == 0) and (estagio_controle->Memread == 0)){
 		instrucoes_aritmeticas(estagio_controle, reg); //Realiza os calculos aritmeticos
@@ -615,7 +599,7 @@ void EX::ALU(controle *estagio_controle, IF *estagio_IF, Registradores *reg){
 	}
 }
 
-void EX::instrucoes_aritmeticas(controle *estagio_controle, Registradores *reg){
+void EX::instrucoes_aritmeticas(Controle *estagio_controle, Registradores *reg){
 	
 	unsigned long valor_rs = 0;
 	unsigned long valor_rt = 0;
@@ -704,7 +688,8 @@ void EX::instrucoes_aritmeticas(controle *estagio_controle, Registradores *reg){
 	cout<<endl;
 }
 
-void EX::instrucoes_de_desvio(controle *estagio_controle, IF *estagio_IF, Registradores *reg){
+// arrumar
+void EX::instrucoes_de_desvio(Controle *estagio_controle, IF *estagio_IF, Registradores *reg){
 	
 	unsigned long valor_rs = 0;
 	unsigned long valor_rt = 0;
@@ -728,8 +713,8 @@ void EX::instrucoes_de_desvio(controle *estagio_controle, IF *estagio_IF, Regist
 	}
 	//bne
 	if(estagio_controle->Aluctrl == "bne"){
-		if(instrucao.rs != instrucao.rt){ 
-			PC += instrucao.offset_address * 4;
+		if(valor_rs != valor_rt){ 
+			estagio_IF->PC += instrucao.offset_address * 4;
 		}
 		cout<<"É uma instrução de bne"<<endl;
 	}
@@ -739,14 +724,14 @@ void EX::instrucoes_de_desvio(controle *estagio_controle, IF *estagio_IF, Regist
 		bitset<4> pc_upper_binario(num_binario.to_string().substr(0,4));
 		int pc_upper = (int)pc_upper_binario.to_ulong();
 		
-		PC = pc_upper + (instrucao.target * 4);
+		estagio_IF->PC = pc_upper + (instrucao.target * 4);
 		
 		cout<<"É uma instrução de j"<<endl;
 	}
 	//jal
 	if(estagio_controle->Aluctrl == "jal"){
-		r31 = PC; 
-		PC = instrucao.target * 4;
+		valor_ra = estagio_IF->PC;
+		estagio_IF->PC = instrucao.target * 4;
 		cout<<"É uma instrução de jal"<<endl;
 	}
 	//jr
@@ -756,6 +741,46 @@ void EX::instrucoes_de_desvio(controle *estagio_controle, IF *estagio_IF, Regist
 	}
 	
 	cout <<"Desvio em decimal: "<< estagio_IF->PC << endl << endl;
+}
+
+void EX::mostrar_flags_desvio(){
+	
+	cout << "Flag de Zero: " << ALUzero << endl;
+	//cout << "Sinal de Overflow: " <<  << endl;
+	//cout << "Calculo do endereco de desvio: " <<  << endl;
+}
+
+class MEM{
+	
+	private:
+		bitset<tamanho_instrucao> retorno_para_registrador;
+	
+	public:
+		void leitura_escrita_memoria(Memoria *mem, Controle *estagio_controle, EX *estagio_execucao, Registradores *reg);
+};
+
+void MEM::leitura_escrita_memoria(Memoria *mem, Controle *estagio_controle, EX *estagio_execucao, Registradores *reg){
+	
+	if(estagio_controle->Memread == 1 and estagio_controle->Memwrite == 0){ //sw
+		
+		if(estagio_execucao->resultado_endereco >= comeco_memoria_dados and estagio_execucao->resultado_endereco <= (final_memoria_dados - tamanho_instrucao)){
+			
+			bitset<tamanho_instrucao> valor_rd = reg->retornar_registrador(estagio_controle->instrucao.rd);
+			
+			for(int i = 0; i < tamanho_instrucao; i++){
+				
+				mem->memoria[estagio_execucao->resultado_endereco + i] = valor_rd[i];
+			}
+		}
+	}
+	
+	if(estagio_controle->Memread == 0 and estagio_controle->Memwrite == 1){//lw
+		
+		for(int i = 0; i < tamanho_instrucao; i++){
+			
+			retorno_para_registrador[i] = mem->memoria[estagio_execucao->resultado_endereco + i];
+		}
+	}
 }
 
 int main(){
@@ -790,7 +815,7 @@ int main(){
 				
 				mem->depuracao_memoria();
 				
-				controle *estagio_controle = new controle();
+				Controle *estagio_controle = new Controle();
 				
 				estagio_controle->depuracao_controle();
 				
@@ -806,6 +831,8 @@ int main(){
 				EX *estagio_execucao = new EX();
 				
 				estagio_execucao->ALU(estagio_controle, estagio_IF, reg);
+				
+				MEM *estagio_memoria = new MEM();
 				
 				cout << "@@@@@@@@@@@@@@@@@@@@@" << endl;
 				
@@ -828,6 +855,7 @@ int main(){
 				delete estagio_controle;
 				delete reg;
 				delete estagio_execucao;
+				delete estagio_memoria;
 			}
 		}
 		
