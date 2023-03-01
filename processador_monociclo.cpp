@@ -2,6 +2,7 @@
 #include <fstream>
 #include <bitset>
 #include <exception>
+#include <climits>
 
 using namespace std;
 
@@ -581,13 +582,17 @@ class EX{
 		unsigned long valor_novo_ra = comeco_memoria_texto;
 		unsigned long valor_novo_PC = comeco_memoria_texto;
 		bool ALUzero = 0;
+		bool Overflow = 0;
 		unsigned long resultado_endereco;
+		
 		void instrucoes_aritmeticas(Controle *estagio_controle, Registradores *reg);
 		void instrucoes_de_desvio(Controle *estagio_controle, IF *estagio_IF, Registradores *reg);
+		void instrucoes_de_memoria(Controle *estagio_controle, Registradores *reg);
+		void verifica_overflow(long result, long a, long b, string operacao);
 		
 	public:
 		void ALU(Controle *estagio_controle, IF *estagio_IF, Registradores *reg);
-		void mostrar_flags_desvio();
+		void mostrar_flags_desvio(IF *estagio_IF);
 };
 
 void EX::ALU(Controle *estagio_controle, IF *estagio_IF, Registradores *reg){
@@ -599,107 +604,141 @@ void EX::ALU(Controle *estagio_controle, IF *estagio_IF, Registradores *reg){
 	else if((estagio_controle->Branch == 1) or (estagio_controle->Jump == 1)){
 		instrucoes_de_desvio(estagio_controle, estagio_IF, reg); //Realiza os calculos dos desvios
 	}
+	
+	else if ((estagio_controle->Branch == 0) and (estagio_controle->Jump == 0) and ((estagio_controle->Memwrite == 1) or (estagio_controle->Memread == 1))){
+		instrucoes_de_memoria(estagio_controle, reg); //Realiza os calculos para armazenar valores na memoria
+	}
 }
 
 void EX::instrucoes_aritmeticas(Controle *estagio_controle, Registradores *reg){
 	
-	unsigned long valor_rs = 0;
-	unsigned long valor_rt = 0;
+	unsigned long uvalor_rs = 0;
+	unsigned long uvalor_rt = 0;
+	long valor_rs = 0;
+	long valor_rt = 0;
 	
 	try{
+		uvalor_rs = (reg->retornar_registrador(estagio_controle->instrucao.rs)).to_ulong();
+		valor_rs = static_cast<long>(uvalor_rs);
 		
-		valor_rs = (reg->retornar_registrador(estagio_controle->instrucao.rs)).to_ulong();
-		valor_rt = (reg->retornar_registrador(estagio_controle->instrucao.rt)).to_ulong();
+		uvalor_rt = (reg->retornar_registrador(estagio_controle->instrucao.rt)).to_ulong();
+		valor_rt = static_cast<long>(uvalor_rt);
 	}
 	catch(exception& e){
 		
 		cout << e.what();
 	}
 	
-	unsigned long resultado = 0;
+	long resultado = 0;
+	long zero = 0;
 	
 	//add
 	if(estagio_controle->Aluctrl == "add"){
 		resultado = valor_rs + valor_rt;
+		verifica_overflow(resultado, valor_rs, valor_rt, "adicao");
+		zero = resultado;
+		
 		cout<<"É uma instrução de add"<<endl;
 	}
 	//sub
 	if(estagio_controle->Aluctrl == "sub"){
 		resultado = valor_rs - valor_rt;
+		verifica_overflow(resultado, valor_rs, valor_rt, "subtracao");
+		zero = resultado;
 		cout<<"É uma instrução de sub"<<endl;
 	}
 	//addi
 	if(estagio_controle->Aluctrl == "addi"){
 		valor_rt = valor_rs + stoi(estagio_controle->instrucao.offset_address);
+		verifica_overflow(valor_rt, valor_rs, stoi(estagio_controle->instrucao.offset_address), "adicao");
+		zero = valor_rt;
 		cout<<"É uma instrução de addi"<<endl;
 	}
 	//and
 	if(estagio_controle->Aluctrl == "and"){
 		resultado = (valor_rs & valor_rt);
+		//nao causa overflow
+		zero = resultado;
 		cout<<"É uma instrução de and"<<endl;
 	}
 	//or
 	if(estagio_controle->Aluctrl == "or"){
 		resultado = (valor_rs | valor_rt);
+		//nao causa overflow
+		zero = resultado;
 		cout<<"É uma instrução de or"<<endl;
 	}
 	//nor
 	if(estagio_controle->Aluctrl == "nor"){
 		resultado = ~(valor_rs | valor_rt);
+		//nao causa overflow
+		zero = resultado;
 		cout<<"É uma instrução de nor"<<endl;
 	}
 	//mult
 	if(estagio_controle->Aluctrl == "mult"){
 		HI = valor_rs * valor_rt;
+		verifica_overflow(HI, valor_rs, valor_rt, "multiplicacao");
 		LO = HI;
+		zero = HI;
 		cout<<"É uma instrução de mult"<<endl;
-	}
-	//sll
-	if(estagio_controle->Aluctrl == "sll"){
-		resultado = valor_rt << sa;
-		cout<<"É uma instrução de sll"<<endl;
-	}
-	//srl
-	if(estagio_controle->Aluctrl == "srl"){
-		resultado = valor_rt >> sa;
-		cout<<"É uma instrução de srl"<<endl;
 	}
 	//mul
 	if(estagio_controle->Aluctrl == "mul"){
 		resultado = valor_rs * valor_rt;
+		verifica_overflow(resultado, valor_rs, valor_rt, "multiplicacao");
+		zero = resultado;
 		cout<<"É uma instrução de mul"<<endl;
 	}
 	//div
 	if(estagio_controle->Aluctrl == "div"){
 		HI = valor_rs % valor_rt; 
 		LO = valor_rs / valor_rt;
+		verifica_overflow(LO, valor_rs, valor_rt, "divisao");
+		zero = LO;
 		cout<<"É uma instrução de div"<<endl;
 	}
 	//slt
 	if(estagio_controle->Aluctrl == "slt"){
 		resultado = valor_rs < valor_rt;
+		//nao causa overflow
+		zero = resultado;
 		cout<<"É uma instrução de slt"<<endl;
 	}
+	//sll
+	if(estagio_controle->Aluctrl == "sll"){
+		resultado = valor_rt << sa;
+		verifica_overflow(resultado, valor_rt, sa, "sll");
+		zero = resultado;
+		cout<<"É uma instrução de sll"<<endl;
+	}
+	//srl
+	if(estagio_controle->Aluctrl == "srl"){
+		resultado = valor_rt >> sa;
+		//nao causa overflow
+		zero = resultado;
+		cout<<"É uma instrução de srl"<<endl;
+	}
 	
-	//Verifica se algum resultado corresponde a 0 para acionar a flag.
-	
-	if(((resultado == 0) or (valor_rt == 0)) and ((HI == 0) and (LO == 0))){ //Tenho que checar com calma
+	if(zero == 0){ //Verifica se algum resultado corresponde a 0 para acionar a flag.
 		ALUzero = 1;
 	}
 	
 	cout<<endl;
 }
 
-// arrumar
 void EX::instrucoes_de_desvio(Controle *estagio_controle, IF *estagio_IF, Registradores *reg){
 	
 	unsigned long valor_rs = 0;
 	unsigned long valor_rt = 0;
+	unsigned long valor_offset = 0;
+	unsigned long valor_target = 0;
 	
 	try{
-		
 		valor_rs = (reg->retornar_registrador(estagio_controle->instrucao.rs)).to_ulong();
 		valor_rt = (reg->retornar_registrador(estagio_controle->instrucao.rt)).to_ulong();
+		valor_offset = bitset<16>(estagio_controle->instrucao.offset_address).to_ulong();
+		valor_target = bitset<26>(estagio_controle->instrucao.target).to_ulong();
 	}
 	catch(exception& e){
 		
@@ -709,31 +748,31 @@ void EX::instrucoes_de_desvio(Controle *estagio_controle, IF *estagio_IF, Regist
 	//beq
 	if(estagio_controle->Aluctrl == "beq"){ 
 		if(valor_rs == valor_rt){
-			estagio_IF->PC += estagio_controle->instrucao.offset_address * 4;
+			estagio_IF->PC += valor_offset * 4;
 		}
 		cout<<"É uma instrução de beq"<<endl;
 	}
 	//bne
 	if(estagio_controle->Aluctrl == "bne"){
 		if(valor_rs != valor_rt){ 
-			estagio_IF->PC += instrucao.offset_address * 4;
+			estagio_IF->PC += valor_offset * 4;
 		}
 		cout<<"É uma instrução de bne"<<endl;
 	}
 	//j
 	if(estagio_controle->Aluctrl == "j"){
-		bitset<32> num_binario(PC);
+		bitset<32> num_binario(estagio_IF->PC);
 		bitset<4> pc_upper_binario(num_binario.to_string().substr(0,4));
 		int pc_upper = (int)pc_upper_binario.to_ulong();
 		
-		estagio_IF->PC = pc_upper + (instrucao.target * 4);
+		estagio_IF->PC = pc_upper + (valor_target * 4);
 		
 		cout<<"É uma instrução de j"<<endl;
 	}
 	//jal
 	if(estagio_controle->Aluctrl == "jal"){
-		valor_ra = estagio_IF->PC;
-		estagio_IF->PC = instrucao.target * 4;
+		valor_novo_ra = estagio_IF->PC;
+		estagio_IF->PC = valor_target * 4;
 		cout<<"É uma instrução de jal"<<endl;
 	}
 	//jr
@@ -742,14 +781,71 @@ void EX::instrucoes_de_desvio(Controle *estagio_controle, IF *estagio_IF, Regist
 		cout<<"É uma instrução de jr"<<endl;
 	}
 	
-	cout <<"Desvio em decimal: "<< estagio_IF->PC << endl << endl;
+	resultado_endereco = estagio_IF->PC;
+	
 }
 
-void EX::mostrar_flags_desvio(){
+void EX::instrucoes_de_memoria(Controle *estagio_controle, Registradores *reg){
+	
+	unsigned long valor_rs = 0;
+	unsigned long valor_rt = 0;
+	unsigned long valor_offset = 0;
+	
+	try{
+		valor_rs = (reg->retornar_registrador(estagio_controle->instrucao.rs)).to_ulong();
+		valor_rt = (reg->retornar_registrador(estagio_controle->instrucao.rt)).to_ulong();
+		valor_offset = bitset<16>(estagio_controle->instrucao.offset_address).to_ulong();
+	}
+	catch(exception& e){
+		
+		cout << e.what();
+	}
+	
+	//lw
+	if(estagio_controle->Aluctrl == "lw"){
+		valor_rt = *(int*)(valor_offset + valor_rs);
+		cout<<"É uma instrução de lw"<<endl;
+	}
+	//sw
+	if(estagio_controle->Aluctrl == "sw"){
+		*(int*)(valor_offset + valor_rs) = valor_rt;
+		cout<<"É uma instrução de sw"<<endl;
+	}
+	
+	
+}
+
+void EX::verifica_overflow(long result, long a, long b, string operacao){
+	
+	
+	if ((operacao == "adicao") and ((a > 0 && b > 0 && result < 0) || (a < 0 && b < 0 && result > 0))) { // adicao
+        Overflow = 1;
+    }
+    
+    if ((operacao == "subtracao") and ((a > 0 && b < 0 && result < 0) || (a < 0 && b > 0 && result > 0))) { // subtracao
+         Overflow = 1;
+    }
+    
+    if ((operacao == "multiplicacao") and (a != 0 && b != 0 && result / a != b)) { // multiplicacao
+         Overflow = 1;
+    }
+    
+    if ((operacao == "divisao") and (b == 0 || (a == INT_MIN && b == -1))) { // divisao
+         Overflow = 1;
+    }
+    
+    if ((operacao == "sll") and (result > INT_MAX)) { //caso especial sll
+        Overflow = 1;
+    }
+    
+	
+}
+
+void EX::mostrar_flags_desvio(IF *estagio_IF){
 	
 	cout << "Flag de Zero: " << ALUzero << endl;
-	//cout << "Sinal de Overflow: " <<  << endl;
-	//cout << "Calculo do endereco de desvio: " <<  << endl;
+	cout << "Sinal de Overflow: " << Overflow << endl;
+	cout << "Calculo do endereco de desvio: " << resultado_endereco << endl;
 }
 
 class MEM{
