@@ -754,7 +754,7 @@ class MEM{
 	
 	private:
 		bitset<tamanho_instrucao> retorno_para_registrador;
-	
+		
 	public:
 		void leitura_escrita_memoria(Memoria *mem, Controle *estagio_controle, EX *estagio_execucao, Registradores *reg);
 };
@@ -766,6 +766,10 @@ void MEM::leitura_escrita_memoria(Memoria *mem, Controle *estagio_controle, EX *
 		if(estagio_execucao->resultado_endereco >= comeco_memoria_dados and estagio_execucao->resultado_endereco <= (final_memoria_dados - tamanho_instrucao)){
 			
 			bitset<tamanho_instrucao> valor_rd = reg->retornar_registrador(estagio_controle->instrucao.rd);
+			
+			cout << "Operacao de escrita na memoria!" << endl;
+			cout << "\tMemwrite: " << estagio_controle->Memwrite << endl;
+			cout << "\t" << valor_rd.to_ulong() << endl;
 			
 			for(int i = 0; i < tamanho_instrucao; i++){
 				
@@ -780,7 +784,22 @@ void MEM::leitura_escrita_memoria(Memoria *mem, Controle *estagio_controle, EX *
 			
 			retorno_para_registrador[i] = mem->memoria[estagio_execucao->resultado_endereco + i];
 		}
+		
+		cout << "Operacao de leitura na memoria!" << endl;
+		cout << "\tMemread: " << estagio_controle->Memread << endl;
+		cout << "\t" << estagio_execucao->resultado_endereco << endl;
 	}
+}
+
+class WR{
+	
+	public:
+		void leitura_escrita_registrador(Memoria *mem, Controle *estagio_controle, EX *estagio_execucao, Registradores *reg);
+};
+
+void WR::leitura_escrita_registrador(Memoria *mem, Controle *estagio_controle, EX *estagio_execucao, Registradores *reg){
+	
+	
 }
 
 int main(){
