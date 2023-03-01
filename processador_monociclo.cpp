@@ -134,6 +134,7 @@ class Controle{
 	friend class EX;
 	friend class Memoria;
 	friend class MEM;
+	friend class WR;
 	
 	private:
 		bool Regdst;
@@ -516,6 +517,7 @@ class Registradores{
 		Registradores();
 		~Registradores();
 		bitset<tamanho_instrucao> retornar_registrador(int numero_registrador);
+		void setar_registrador(bitset<tamanho_instrucao> dado_para_escrever, int numero_registrador);
 };
 
 Registradores::Registradores(){
@@ -794,12 +796,17 @@ void MEM::leitura_escrita_memoria(Memoria *mem, Controle *estagio_controle, EX *
 class WR{
 	
 	public:
-		void leitura_escrita_registrador(Memoria *mem, Controle *estagio_controle, EX *estagio_execucao, Registradores *reg);
+		void leitura_escrita_registrador(Controle *estagio_controle, Registradores *reg, MEM *estagio_memoria);
 };
 
-void WR::leitura_escrita_registrador(Memoria *mem, Controle *estagio_controle, EX *estagio_execucao, Registradores *reg){
+void WR::leitura_escrita_registrador(Controle *estagio_controle, Registradores *reg, MEM *estagio_memoria){
 	
-	
+	if(estagio_controle->Regwrite == 1){
+		
+		bitset<tamanho_instrucao> valor_rd = reg->retornar_registrador(estagio_controle->instrucao.rd);
+		
+		reg->setar_registrador(valor_rd, estagio_controle->instrucao.rd);
+	}
 }
 
 int main(){
@@ -853,6 +860,8 @@ int main(){
 				
 				MEM *estagio_memoria = new MEM();
 				
+				WR *estagio_registrador = new WR();
+				
 				cout << "@@@@@@@@@@@@@@@@@@@@@" << endl;
 				
 				cont_restante_instrucoes--;
@@ -875,6 +884,7 @@ int main(){
 				delete reg;
 				delete estagio_execucao;
 				delete estagio_memoria;
+				delete estagio_registrador;
 			}
 		}
 		
