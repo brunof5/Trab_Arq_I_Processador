@@ -1197,6 +1197,8 @@ void WR::leitura_escrita_registrador(Controle *estagio_controle, Registradores *
 	}
 }
 
+// #######################################
+
 int main(){
 	
 	ifstream arquivo_entrada("instrucoes_binario.bin", ios::binary);
