@@ -282,6 +282,10 @@ string formato_instrucao_I(int instrucao, ifstream& arquivo_entrada){
 				string funct = "101010";
 				instrucao_decodificada = opcode + primeiro_operando + segundo_operando + at_address + shamt + funct + "\n";
 				
+				bitset<16> aux (offset);
+				unsigned long novo_valor_offset = aux.to_ulong() + 32;
+				offset = bitset<16>(novo_valor_offset).to_string();
+				
 				// beq
 				opcode = "000100";
 				string zero_address = "00000";
