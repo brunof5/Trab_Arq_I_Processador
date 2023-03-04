@@ -71,9 +71,9 @@ Memoria::Memoria(ifstream& arquivo_entrada){
 void Memoria::depuracao_memoria(){
 	
 	bitset<tamanho_instrucao> instrucao_atual;
-	int aux = comeco_memoria_texto;
+	int aux = comeco_memoria_dados;
 	
-	for(int j = 0; j < 21; j++){
+	for(int j = 0; j < 5; j++){
 		
 		cout << aux << endl;
 		
@@ -110,6 +110,7 @@ class IF{
 		bitset<tamanho_instrucao> get_instrucao_atual() { return instrucao_atual; };
 		void trocar_instrucao(Memoria *mem);
 		void mostrar_valor_atual_PC() { cout << "Valor atual do PC: " << PC << endl; };
+		void setar_novo_PC(long novo_PC) { PC = novo_PC; };
 };
 
 IF::IF(Memoria *mem){
@@ -377,7 +378,7 @@ void Controle::decodificar_instrucao(Memoria *mem, IF *estagio_IF){// Maioria n�
 		
 		else if(instrucao.funct == "011010"){ //div -- ok
 			Regdst = 0;
-			Regwrite = 1;
+			Regwrite = 0;
 			Alusrc = 0;
 			Aluop = 11;
 			MemtoReg = 0;
@@ -541,8 +542,6 @@ class Registradores{
 		bitset<tamanho_instrucao> sp; //stack pointer
 		bitset<tamanho_instrucao> fp; //frame pointer
 		bitset<tamanho_instrucao> ra; // retorno de função
-		bitset<tamanho_instrucao> HIGH;
-		bitset<tamanho_instrucao> LOW;
 		
 	public:
 		Registradores();
@@ -553,8 +552,13 @@ class Registradores{
 
 Registradores::Registradores(){
 	
-	s0.set(2, 1);
+	t0 = bitset<tamanho_instrucao>(comeco_memoria_dados);
+	
+	s0 = bitset<tamanho_instrucao>(14);
 	s1.set(3, 1);
+	
+	gp = bitset<tamanho_instrucao>(comeco_memoria_dados);
+	sp = bitset<tamanho_instrucao>(final_memoria_dados - tamanho_instrucao + 1);
 }
 
 bitset<tamanho_instrucao> Registradores::retornar_registrador(int numero_registrador){
@@ -613,7 +617,7 @@ void Registradores::setar_registrador(long dado_para_escrever, int numero_regist
 			break;
 			
 		case 1:
-			cout << "Tentativa de setar algum valor no registrador at - NEGADO!" << endl;
+			at = valor_para_modificar;
 			break;
 			
 		case 2:
@@ -782,7 +786,7 @@ class EX{
 	friend class WR;
 	
 	private:
-		int HI = 0, LO = 0, sa = 0;
+		long HI = 0, LO = 0;
 		unsigned long valor_novo_ra = 0;
 		unsigned long valor_novo_PC = 0;
 		long resultado_ALU = 0;
@@ -797,6 +801,7 @@ class EX{
 	public:
 		void ALU(Controle *estagio_controle, IF *estagio_IF, Registradores *reg);
 		void mostrar_flags_desvio();
+		void reset_flags_desvio();
 };
 
 void EX::ALU(Controle *estagio_controle, IF *estagio_IF, Registradores *reg){
@@ -818,8 +823,15 @@ void EX::instrucoes_aritmeticas(Controle *estagio_controle, Registradores *reg){
 	
 	unsigned long uvalor_rs = 0;
 	unsigned long uvalor_rt = 0;
+	unsigned long uvalor_shamt = 0;
+	unsigned long uoffset_address = 0;
+	
 	long valor_rs = 0;
 	long valor_rt = 0;
+	long valor_shamt = 0;
+	long valor_offset_address = 0;
+	bitset<5> aux_valor_shamt (estagio_controle->instrucao.shamt);
+	bitset<16> aux_valor_offset_address (estagio_controle->instrucao.offset_address);
 	
 	cout << estagio_controle->instrucao.rs << endl;
 	
@@ -829,6 +841,12 @@ void EX::instrucoes_aritmeticas(Controle *estagio_controle, Registradores *reg){
 		
 		uvalor_rt = (reg->retornar_registrador(estagio_controle->instrucao.rt)).to_ulong();
 		valor_rt = static_cast<long>(uvalor_rt);
+		
+		uvalor_shamt = aux_valor_shamt.to_ulong();
+		valor_shamt = static_cast<long>(uvalor_shamt);
+		
+		uoffset_address = aux_valor_offset_address.to_ulong();
+		valor_offset_address = static_cast<long>(uoffset_address);
 	}
 	catch(exception& e){
 		
@@ -854,8 +872,9 @@ void EX::instrucoes_aritmeticas(Controle *estagio_controle, Registradores *reg){
 	}
 	//addi
 	if(estagio_controle->Aluctrl == "addi"){
-		resultado_ALU = valor_rs + stoi(estagio_controle->instrucao.offset_address);
-		verifica_overflow(resultado_ALU, valor_rs, stoi(estagio_controle->instrucao.offset_address), "adicao");
+		cout << valor_offset_address << endl;
+		resultado_ALU = valor_rs + valor_offset_address;
+		verifica_overflow(resultado_ALU, valor_rs, valor_offset_address, "adicao");
 		zero = resultado_ALU;
 		cout<<"É uma instrução de addi"<<endl;
 	}
@@ -899,6 +918,8 @@ void EX::instrucoes_aritmeticas(Controle *estagio_controle, Registradores *reg){
 	if(estagio_controle->Aluctrl == "div"){
 		HI = valor_rs % valor_rt; 
 		LO = valor_rs / valor_rt;
+		cout << HI << endl;
+		cout << LO << endl;
 		verifica_overflow(LO, valor_rs, valor_rt, "divisao");
 		zero = LO;
 		cout<<"É uma instrução de div"<<endl;
@@ -912,14 +933,14 @@ void EX::instrucoes_aritmeticas(Controle *estagio_controle, Registradores *reg){
 	}
 	//sll
 	if(estagio_controle->Aluctrl == "sll"){
-		resultado_ALU = valor_rt << sa;
-		verifica_overflow(resultado_ALU, valor_rt, sa, "sll");
+		resultado_ALU = valor_rt << valor_shamt;
+		verifica_overflow(resultado_ALU, valor_rt, valor_shamt, "sll");
 		zero = resultado_ALU;
 		cout<<"É uma instrução de sll"<<endl;
 	}
 	//srl
 	if(estagio_controle->Aluctrl == "srl"){
-		resultado_ALU = valor_rt >> sa;
+		resultado_ALU = valor_rt >> valor_shamt;
 		//nao causa overflow
 		zero = resultado_ALU;
 		cout<<"É uma instrução de srl"<<endl;
@@ -934,16 +955,30 @@ void EX::instrucoes_aritmeticas(Controle *estagio_controle, Registradores *reg){
 
 void EX::instrucoes_de_desvio(Controle *estagio_controle, IF *estagio_IF, Registradores *reg){
 	
-	unsigned long valor_rs = 0;
-	unsigned long valor_rt = 0;
-	unsigned long valor_offset = 0;
-	unsigned long valor_target = 0;
+	unsigned long uvalor_rs = 0;
+	unsigned long uvalor_rt = 0;
+	unsigned long uvalor_offset_address = 0;
+	unsigned long uvalor_target = 0;
+	
+	long valor_rs = 0;
+	long valor_rt = 0;
+	long valor_offset_address = 0;
+	long valor_target = 0;
+	bitset<16> aux_valor_offset_address (estagio_controle->instrucao.offset_address);
+	bitset<26> aux_valor_target (estagio_controle->instrucao.target);
 	
 	try{
-		valor_rs = (reg->retornar_registrador(estagio_controle->instrucao.rs)).to_ulong();
-		valor_rt = (reg->retornar_registrador(estagio_controle->instrucao.rt)).to_ulong();
-		valor_offset = bitset<16>(estagio_controle->instrucao.offset_address).to_ulong();
-		valor_target = bitset<26>(estagio_controle->instrucao.target).to_ulong();
+		uvalor_rs = (reg->retornar_registrador(estagio_controle->instrucao.rs)).to_ulong();
+		valor_rs = static_cast<long>(uvalor_rs);
+		
+		uvalor_rt = (reg->retornar_registrador(estagio_controle->instrucao.rt)).to_ulong();
+		valor_rt = static_cast<long>(uvalor_rt);
+		
+		uvalor_offset_address = aux_valor_offset_address.to_ulong();
+		valor_offset_address = static_cast<long>(uvalor_offset_address);
+		
+		uvalor_target = aux_valor_target.to_ulong();
+		valor_target = static_cast<long>(uvalor_target);
 	}
 	catch(exception& e){
 		
@@ -953,53 +988,63 @@ void EX::instrucoes_de_desvio(Controle *estagio_controle, IF *estagio_IF, Regist
 	//beq
 	if(estagio_controle->Aluctrl == "beq"){ 
 		if(valor_rs == valor_rt){
-			valor_novo_PC = estagio_IF->PC + valor_offset * 4;
+			valor_novo_PC = valor_offset_address;
 		}
 		cout<<"É uma instrução de beq"<<endl;
 	}
 	//bne
 	if(estagio_controle->Aluctrl == "bne"){
 		if(valor_rs != valor_rt){ 
-			valor_novo_PC = estagio_IF->PC + valor_offset * 4;
+			valor_novo_PC = valor_offset_address;
 		}
 		cout<<"É uma instrução de bne"<<endl;
 	}
 	//j
 	if(estagio_controle->Aluctrl == "j"){
-		bitset<32> num_binario(estagio_IF->PC);
-		bitset<4> pc_upper_binario(num_binario.to_string().substr(0,4));
+		bitset<tamanho_instrucao> num_binario(estagio_IF->PC);
+		bitset<tamanho_palavra> pc_upper_binario(num_binario.to_string().substr(0,4));
 		int pc_upper = (int)pc_upper_binario.to_ulong();
 		
-		valor_novo_PC = pc_upper + (valor_target * 4);
+		valor_novo_PC = pc_upper + valor_target;
 		
 		cout<<"É uma instrução de j"<<endl;
 	}
 	//jal
 	if(estagio_controle->Aluctrl == "jal"){
 		valor_novo_ra = estagio_IF->PC;
-		valor_novo_PC = valor_target * 4;
+		valor_novo_PC = valor_target;
+		cout << valor_target << endl;
 		cout<<"É uma instrução de jal"<<endl;
 	}
 	//jr
 	if(estagio_controle->Aluctrl == "jr"){
-		valor_novo_PC = estagio_controle->instrucao.rs;
+		valor_novo_PC = valor_rs;
 		cout<<"É uma instrução de jr"<<endl;
 	}
 	
-	if(valor_novo_PC != 0)
+	if(valor_novo_PC != 0){
+		
 		resultado_endereco = valor_novo_PC;
+		estagio_IF->setar_novo_PC(resultado_endereco);
+	}
 }
 
 void EX::instrucoes_de_memoria(Controle *estagio_controle, Registradores *reg){
 	
-	unsigned long valor_rs = 0;
-	unsigned long valor_rt = 0;
-	unsigned long valor_offset = 0;
+	unsigned long uvalor_rs = 0;
+	unsigned long uvalor_offset_address = 0;
+	
+	long valor_rs = 0;
+	long valor_offset_address = 0;
+	bitset<16> aux_valor_offset_address (estagio_controle->instrucao.offset_address);
 	
 	try{
-		valor_rs = (reg->retornar_registrador(estagio_controle->instrucao.rs)).to_ulong();
-		valor_rt = (reg->retornar_registrador(estagio_controle->instrucao.rt)).to_ulong();
-		valor_offset = bitset<16>(estagio_controle->instrucao.offset_address).to_ulong();
+		
+		uvalor_rs = (reg->retornar_registrador(estagio_controle->instrucao.rs)).to_ulong();
+		valor_rs = static_cast<long>(uvalor_rs);
+		
+		uvalor_offset_address = aux_valor_offset_address.to_ulong();
+		valor_offset_address = static_cast<long>(uvalor_offset_address);
 	}
 	catch(exception& e){
 		
@@ -1008,12 +1053,13 @@ void EX::instrucoes_de_memoria(Controle *estagio_controle, Registradores *reg){
 	
 	//lw
 	if(estagio_controle->Aluctrl == "lw"){
-		valor_rt = *(int*)(valor_offset + valor_rs);
+		resultado_endereco = valor_rs + ((valor_offset_address / 4) * tamanho_instrucao);
 		cout<<"É uma instrução de lw"<<endl;
 	}
 	//sw
 	if(estagio_controle->Aluctrl == "sw"){
-		*(int*)(valor_offset + valor_rs) = valor_rt;
+		resultado_endereco = valor_rs + ((valor_offset_address / 4) * tamanho_instrucao);
+		cout << resultado_endereco << endl;
 		cout<<"É uma instrução de sw"<<endl;
 	}
 }
@@ -1025,7 +1071,7 @@ void EX::verifica_overflow(long result, long a, long b, string operacao){
 		Overflow = 1;
 	}
 	
-	if((operacao == "subtracao") and ((a > 0 && b < 0 && result < 0) || (a < 0 && b > 0 && result > 0))) { // subtracao
+	if((operacao == "subtracao") and ((a > 0 && b < 0 && result < 0) || (a < 0 && b > 0 && result > 0) || (a > 0 && b > 0 && result < 0))) { // subtracao
 		Overflow = 1;
 	}
 	
@@ -1049,9 +1095,18 @@ void EX::mostrar_flags_desvio(){
 	cout << "Calculo do endereco de desvio: " << resultado_endereco << endl;
 }
 
+void EX::reset_flags_desvio(){
+	
+	ALUzero = 0;
+	Overflow = 0;
+	resultado_endereco = 0;
+}
+
 // #######################################
 
 class MEM{
+	
+	friend class WR;
 	
 	private:
 		bitset<tamanho_instrucao> retorno_para_registrador;
@@ -1062,33 +1117,47 @@ class MEM{
 
 void MEM::leitura_escrita_memoria(Memoria *mem, Controle *estagio_controle, EX *estagio_execucao, Registradores *reg){
 	
-	if(estagio_controle->Memread == 1 and estagio_controle->Memwrite == 0){ //sw
+	if(estagio_controle->Memread == 0 and estagio_controle->Memwrite == 1){ //sw
 		
-		if(estagio_execucao->resultado_endereco >= comeco_memoria_dados and estagio_execucao->resultado_endereco <= (final_memoria_dados - tamanho_instrucao)){
+		if(estagio_execucao->resultado_endereco >= comeco_memoria_dados and estagio_execucao->resultado_endereco <= (final_memoria_dados - tamanho_instrucao + 1)){
 			
-			bitset<tamanho_instrucao> valor_rd = reg->retornar_registrador(estagio_controle->instrucao.rd);
+			bitset<tamanho_instrucao> valor_rt = reg->retornar_registrador(estagio_controle->instrucao.rt);
+			
+			cout << valor_rt << endl;
 			
 			cout << "Operacao de escrita na memoria!" << endl;
 			cout << "\tMemwrite: " << estagio_controle->Memwrite << endl;
-			cout << "\t" << valor_rd.to_ulong() << endl;
+			cout << "\t" << valor_rt.to_ulong() << endl;
+			
+			for(int i = 0, k = 31; i < tamanho_instrucao; i++, k--){
+				
+				cout << valor_rt[k] << " ";
+				
+				mem->memoria[estagio_execucao->resultado_endereco + k] = valor_rt[k];
+			}
+			cout << endl;
+		}
+		
+		else
+			throw runtime_error("ERRO ESCRITA NA MEMORIA - o endereco em que deseja escrever nao pertence a regiao de dados da memoria!");
+	}
+	
+	else if(estagio_controle->Memread == 1 and estagio_controle->Memwrite == 0){//lw
+		
+		if(estagio_execucao->resultado_endereco >= comeco_memoria_dados and estagio_execucao->resultado_endereco <= (final_memoria_dados - tamanho_instrucao + 1)){
 			
 			for(int i = 0; i < tamanho_instrucao; i++){
 				
-				mem->memoria[estagio_execucao->resultado_endereco + i] = valor_rd[i];
+				retorno_para_registrador[i] = mem->memoria[estagio_execucao->resultado_endereco + i];
 			}
-		}
-	}
-	
-	if(estagio_controle->Memread == 0 and estagio_controle->Memwrite == 1){//lw
-		
-		for(int i = 0; i < tamanho_instrucao; i++){
 			
-			retorno_para_registrador[i] = mem->memoria[estagio_execucao->resultado_endereco + i];
+			cout << "Operacao de leitura na memoria!" << endl;
+			cout << "\tMemread: " << estagio_controle->Memread << endl;
+			cout << "\t" << estagio_execucao->resultado_endereco << endl;
 		}
 		
-		cout << "Operacao de leitura na memoria!" << endl;
-		cout << "\tMemread: " << estagio_controle->Memread << endl;
-		cout << "\t" << estagio_execucao->resultado_endereco << endl;
+		else
+			throw runtime_error("ERRO LEITURA NA MEMORIA - o endereco em que deseja ler nao pertence a regiao de dados da memoria!");
 	}
 }
 
@@ -1097,14 +1166,34 @@ void MEM::leitura_escrita_memoria(Memoria *mem, Controle *estagio_controle, EX *
 class WR{
 	
 	public:
-		void leitura_escrita_registrador(Controle *estagio_controle, Registradores *reg, EX *estagio_execucao);
+		void leitura_escrita_registrador(Controle *estagio_controle, Registradores *reg, EX *estagio_execucao, MEM *estagio_memoria);
 };
 
-void WR::leitura_escrita_registrador(Controle *estagio_controle, Registradores *reg, EX *estagio_execucao){
+void WR::leitura_escrita_registrador(Controle *estagio_controle, Registradores *reg, EX *estagio_execucao, MEM *estagio_memoria){
 	
-	if(estagio_controle->Regwrite == 1 and estagio_controle->Regdst == 1){
+	if(estagio_controle->Regwrite == 1 and estagio_controle->Jump == 1){//jal
+		
+		long novo_ra = static_cast<long>(estagio_execucao->valor_novo_ra);
+		
+		reg->setar_registrador(novo_ra, 31);
+	}
+	
+	else if(estagio_controle->Regwrite == 1 and estagio_controle->MemtoReg == 1){//lw
+		
+		unsigned long uvalor_para_registrador = estagio_memoria->retorno_para_registrador.to_ulong();
+		long valor_para_registrador = static_cast<long>(uvalor_para_registrador);
+		
+		reg->setar_registrador(valor_para_registrador, estagio_controle->instrucao.rt);
+	}
+	
+	else if(estagio_controle->Regwrite == 1 and estagio_controle->Regdst == 1 and estagio_execucao->Overflow == 0){
 		
 		reg->setar_registrador(estagio_execucao->resultado_ALU, estagio_controle->instrucao.rd);
+	}
+	
+	else if(estagio_controle->Regwrite == 1 and estagio_controle->Regdst == 0 and estagio_execucao->Overflow == 0){
+		
+		reg->setar_registrador(estagio_execucao->resultado_ALU, estagio_controle->instrucao.rt);
 	}
 }
 
@@ -1136,7 +1225,7 @@ int main(){
 			MEM *estagio_memoria = new MEM();
 			WR *estagio_registrador = new WR();
 			
-			while(estagio_IF->verificar_instrucao()){
+			while(estagio_IF->verificar_instrucao() and integridade){
 				
 				estagio_IF->mostrar_valor_atual_PC();
 				mem->depuracao_memoria();
@@ -1155,14 +1244,30 @@ int main(){
 				
 				estagio_execucao->mostrar_flags_desvio();
 				
-				estagio_registrador->leitura_escrita_registrador(estagio_controle, reg, estagio_execucao);
+				try{
+					
+					estagio_memoria->leitura_escrita_memoria(mem, estagio_controle, estagio_execucao, reg);
+					
+					mem->depuracao_memoria();
+				}
+				catch(exception& e){
+					
+					cout << e.what();
+					integridade = false;
+				}
 				
-				estagio_controle->reset();
-				reg->depuracao_registradores();
-				
-				cout << "@@@@@@@@@@@@@@@@@@@@@" << endl;
-				
-				estagio_IF->trocar_instrucao(mem);
+				if(integridade){
+					
+					estagio_registrador->leitura_escrita_registrador(estagio_controle, reg, estagio_execucao, estagio_memoria);
+					
+					estagio_controle->reset();
+					estagio_execucao->reset_flags_desvio();
+					reg->depuracao_registradores();
+					
+					cout << "@@@@@@@@@@@@@@@@@@@@@" << endl;
+					
+					estagio_IF->trocar_instrucao(mem);
+				}
 			}
 			
 			delete estagio_IF;
