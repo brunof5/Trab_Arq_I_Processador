@@ -829,8 +829,14 @@ void EX::instrucoes_aritmeticas(Controle *estagio_controle, Registradores *reg){
 	}
 	//div
 	if(estagio_controle->Aluctrl == "div"){
-		HI = valor_rs % valor_rt; 
-		LO = valor_rs / valor_rt;
+		if(valor_rt != 0){
+			HI = valor_rs % valor_rt; 
+			LO = valor_rs / valor_rt;
+		}
+		else{
+			HI = 0;
+			LO = 0;
+		}
 		//cout << HI << endl;
 		//cout << LO << endl;
 		verifica_overflow(LO, valor_rs, valor_rt, "divisao");
