@@ -71,9 +71,9 @@ Memoria::Memoria(ifstream& arquivo_entrada){
 void Memoria::depuracao_memoria(){
 	
 	bitset<tamanho_instrucao> instrucao_atual;
-	int aux = comeco_memoria_dados;
+	int aux = 255712;
 	
-	for(int j = 0; j < 5; j++){
+	for(int j = 0; j < 9; j++){
 		
 		cout << aux << endl;
 		
@@ -552,11 +552,6 @@ class Registradores{
 
 Registradores::Registradores(){
 	
-	t0 = bitset<tamanho_instrucao>(comeco_memoria_dados);
-	
-	s0 = bitset<tamanho_instrucao>(14);
-	s1.set(3, 1);
-	
 	gp = bitset<tamanho_instrucao>(comeco_memoria_dados);
 	sp = bitset<tamanho_instrucao>(final_memoria_dados - tamanho_instrucao + 1);
 }
@@ -801,7 +796,7 @@ class EX{
 	public:
 		void ALU(Controle *estagio_controle, IF *estagio_IF, Registradores *reg);
 		void mostrar_flags_desvio();
-		void reset_flags_desvio();
+		void reset_flags_desvio_variaveis();
 };
 
 void EX::ALU(Controle *estagio_controle, IF *estagio_IF, Registradores *reg){
@@ -872,6 +867,7 @@ void EX::instrucoes_aritmeticas(Controle *estagio_controle, Registradores *reg){
 	}
 	//addi
 	if(estagio_controle->Aluctrl == "addi"){
+		cout << valor_rs << endl;
 		cout << valor_offset_address << endl;
 		resultado_ALU = valor_rs + valor_offset_address;
 		verifica_overflow(resultado_ALU, valor_rs, valor_offset_address, "adicao");
@@ -1101,11 +1097,13 @@ void EX::mostrar_flags_desvio(){
 	cout << "Calculo do endereco de desvio: " << resultado_endereco << endl;
 }
 
-void EX::reset_flags_desvio(){
+void EX::reset_flags_desvio_variaveis(){
 	
 	ALUzero = 0;
 	Overflow = 0;
 	resultado_endereco = 0;
+	HI = LO = resultado_ALU = 0;
+	valor_novo_ra = valor_novo_PC = 0;
 }
 
 // #######################################
@@ -1237,7 +1235,6 @@ int main(){
 				
 				estagio_IF->mostrar_valor_atual_PC();
 				mem->depuracao_memoria();
-				estagio_controle->depuracao_controle();
 				reg->depuracao_registradores();
 				
 				cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
@@ -1269,7 +1266,7 @@ int main(){
 					estagio_registrador->leitura_escrita_registrador(estagio_controle, reg, estagio_execucao, estagio_memoria);
 					
 					estagio_controle->reset();
-					estagio_execucao->reset_flags_desvio();
+					estagio_execucao->reset_flags_desvio_variaveis();
 					reg->depuracao_registradores();
 					
 					cout << "@@@@@@@@@@@@@@@@@@@@@" << endl;
