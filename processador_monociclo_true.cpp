@@ -717,7 +717,7 @@ class EX{
 	public:
 		void ALU(Controle *estagio_controle, IF *estagio_IF, Registradores *reg);
 		void mostrar_flags_desvio();
-		void reset_flags_desvio();
+		void reset_flags_desvio_variaveis();
 };
 
 void EX::ALU(Controle *estagio_controle, IF *estagio_IF, Registradores *reg){
@@ -1011,11 +1011,13 @@ void EX::mostrar_flags_desvio(){
 	cout << "\tCalculo do endereco de desvio: " << resultado_endereco << endl << endl;
 }
 
-void EX::reset_flags_desvio(){
+void EX::reset_flags_desvio_variaveis(){
 	
 	ALUzero = 0;
 	Overflow = 0;
 	resultado_endereco = 0;
+	HI = LO = resultado_ALU = 0;
+	valor_novo_ra = valor_novo_PC = 0;
 }
 
 // #######################################
@@ -1183,7 +1185,7 @@ int main(){
 					estagio_registrador->leitura_escrita_registrador(estagio_controle, reg, estagio_execucao, estagio_memoria);
 					
 					estagio_controle->reset();
-					estagio_execucao->reset_flags_desvio();
+					estagio_execucao->reset_flags_desvio_variaveis();
 					
 					estagio_IF->trocar_instrucao(mem);
 					
