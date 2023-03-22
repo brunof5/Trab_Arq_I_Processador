@@ -1,0 +1,11 @@
+addi $8, $0, 5
+addi $9, $0, 5
+addi $10, $0, 3
+addi $11, $0, 1
+loop:
+sub $10, $10, $11
+beq $10, $0, saida
+mul $8, $8, $9
+j loop
+saida:
+EOF

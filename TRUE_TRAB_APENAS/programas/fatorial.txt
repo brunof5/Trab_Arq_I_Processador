@@ -1,0 +1,23 @@
+addi $8, $0, 1
+addi $4, $0, 3
+jal fact
+j saida
+fact:
+addi $29, $29, -64
+sw $31, 4($29)
+sw $4, 0($29)
+slt $10, $4, $8
+beq $10, $0, minus
+addi $2, $0, 1
+addi $29, $29, 64
+jr $31
+minus:
+sub $4, $4, $8
+jal fact
+lw $4, 0($29)
+lw $31, 4($29)
+addi $29, $29, 64
+mul $2, $4, $2
+jr $31
+saida:
+EOF
